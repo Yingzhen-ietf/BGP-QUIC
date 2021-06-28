@@ -5,6 +5,8 @@
         <!ENTITY rfc9000 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9000.xml'>
         <!ENTITY I-D.chen-idr-bgp-over-quic PUBLIC ''
       'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-chen-idr-bgp-over-quic-00.xml'>
+        <!ENTITY I-D.ietf-idr-bgp-multisession PUBLIC ''
+      'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-idr-bgp-multisession-07.xml'>
         ]>
 <?rfc  toc="yes"?>
 <?rfc tocompact="no"?>
@@ -134,6 +136,7 @@
     </references>
     <references title="Informative References">
       &I-D.chen-idr-bgp-over-quic;
+      &I-D.ietf-idr-bgp-multisession;
 
     </references>
 
