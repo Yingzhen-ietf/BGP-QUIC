@@ -60,7 +60,18 @@
   <middle>
     <section title="Introduction">
 	<t>
-	  QUIC <xref target="RFC9000"/> is a new transport protocol. 
+	  Border Gateway Protocol (BGP) uses TCP as its transport protocol.
+    BGP establishes peer relationship between routers using a TCP session
+    on port 179. TCP provides reliable packet communication.
+  </t>
+  <t>QUIC <xref target="RFC9000"/> is a new UDP-based multiplexed and
+  secure transport protocol. QUIC can provide low latency and encrypted
+  transport with resilient connections.
+  </t>
+  <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP over QUIC
+  and the corresponding procedures. Complementary to
+  <xref target="I-D.chen-idr-bgp-over-quic"/>, this draft introduces a
+  mechanism of supporting BGP multi-sessions using multiple QUIC streams. 
 	</t>
     </section>
 
@@ -74,12 +85,39 @@
 
     <section title="Motivation">
       <section title="One TCP Session">
-        <t>disadvantages of one TCP session</t>
+        <t>Multiprotocol Extensions for BGP-4 (MP-BGP) allows BGP to carry
+          information for multiple address families and sub-families, 
+          however it only allows a single ESTABLISHED connection with
+          each peer. </t>
+        <t>As pointed out by <xref target="I-D.ietf-idr-bgp-multisession"/>,
+        there are some disadvantages of using a single BGP session. It
+        is summarized as the following:
+        <list style="empty">
+          <t>Most malformed messages cause BGP session to be terminated,
+            and this causes all AFI/SAFIs to reset, while a malformed
+            message may only impact a given AFI/SAFI. It is desirable
+            to allow the impacted AFI/SAFI to be terminated or reset
+            while leaving other AFI/SAFI unaffected.
+          </t>
+          <t>Since all AFI/SAFI packets are multiplexed into a single
+            BGP session, there would be resource contention when in some
+            cases. Ideally packets for routes update should be given 
+            higher priorities, for example packets for IPv4 unicast
+            route update should have a higher priority than packets for
+            sending flow spec.
+          </t>
+        </list></t>
+
       </section>
       <section title="BGP over QUIC">
-        <t>the relationship with draft-chen-idr-bgp-over-quic</t>
+        <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP 
+        over QUIC. Section 4.3 describes a few options of how to map BGP
+        traffic to QUIC streams in order to solve the head-of-line
+        issues, but how BGP routers would interoperate with multi
+        streams is not defined.</t>
+        <t>This draft defines a mechanism to support BGP multi-sessions
+          using QUIC streams.</t>
       </section>
-  
 	
     </section>
 
@@ -90,7 +128,10 @@
          -- Backwards Compatibility (with draft-chen-idr-bgp-over-quic)</t>
 
       <section title="QUIC Multi-streams">
-        <t>what QUIC multi streams can do</t>
+        <t>In QUIC, multiple streams can be multiplexed onto an underlying
+          connection. Each stream is a separate "order stream of bytes".
+          Each stream has flow control which limits bytes sent on a
+          stream.</t>
       </section>
       <section title="Multiple BGP sessions over QUIC streams">
         <t></t>
@@ -130,13 +171,13 @@
 
 <back>
     <references title="Normative References">
-          &rfc2119;
-          &rfc8174;
-          &rfc9000;
+        &rfc2119;
+        &rfc8174;
+        &rfc9000;
+        &I-D.chen-idr-bgp-over-quic;
     </references>
     <references title="Informative References">
-      &I-D.chen-idr-bgp-over-quic;
-      &I-D.ietf-idr-bgp-multisession;
+        &I-D.ietf-idr-bgp-multisession;
 
     </references>
 
