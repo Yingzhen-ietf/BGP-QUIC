@@ -1,6 +1,8 @@
 <?xml version='1.0'?>
     <!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
         <!ENTITY rfc2119 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml'>
+        <!ENTITY rfc4271 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4271.xml'>
+        <!ENTITY rfc5492 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.5492.xml'>
         <!ENTITY rfc8174 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.8174.xml'>
         <!ENTITY rfc9000 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9000.xml'>
         <!ENTITY I-D.chen-idr-bgp-over-quic PUBLIC ''
@@ -59,20 +61,20 @@
 
   <middle>
     <section title="Introduction">
-	<t>
-	  Border Gateway Protocol (BGP) uses TCP as its transport protocol.
-    BGP establishes peer relationship between routers using a TCP session
-    on port 179. TCP provides reliable packet communication.
-  </t>
-  <t>QUIC <xref target="RFC9000"/> is a new UDP-based multiplexed and
-  secure transport protocol. QUIC can provide low latency and encrypted
-  transport with resilient connections.
-  </t>
-  <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP over QUIC
-  and the corresponding procedures. Complementary to
-  <xref target="I-D.chen-idr-bgp-over-quic"/>, this draft introduces a
-  mechanism of supporting BGP multi-sessions using multiple QUIC streams. 
-	</t>
+	  <t>
+	    Border Gateway Protocol (BGP) uses TCP as its transport protocol.
+      BGP establishes peer relationship between routers using a TCP session
+      on port 179. TCP provides reliable packet communication.
+    </t>
+    <t>QUIC <xref target="RFC9000"/> is a new UDP-based multiplexed and
+    secure transport protocol. QUIC can provide low latency and encrypted
+    transport with resilient connections.
+    </t>
+    <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP over QUIC
+    and the corresponding procedures. Complementary to
+    <xref target="I-D.chen-idr-bgp-over-quic"/>, this draft introduces a
+    mechanism of supporting BGP multi-sessions using multiple QUIC streams. 
+	  </t>
     </section>
 
     <section title="Requirements Language">
@@ -134,13 +136,43 @@
           stream.</t>
       </section>
       <section title="Multiple BGP sessions over QUIC streams">
-        <t></t>
+        <t>This draft proposes to start BGP peering sessions based on
+          AFI/SAFI. It's possible to set but sessions use different options
+          , such as proposed in <xref target="I-D.chen-idr-bgp-over-quic"/>,
+          but that's out of scope of this draft.
+        </t>
+        <t>Connection Collision Detection procedure of the BGP specification
+          <xref target="RFC4271"/> needs to be modified to allow using
+          AFI/SAFI to determine the session uniqueness. Each BGP session
+          operates independently.</t>
       </section>    
     </section>
 
     <section title="Use of Multiple OPEN Messages">
-      <t>TBD.
-      </t>
+      <t> Each BGP session is established using its own OPEN message.
+        New BGP capability <xref target="RFC5492"/> code to indicate
+        that a BGP speaker supports multi sessions is defined.
+        <list style="empty">
+          <t>Capability code (1 octet): TBD</t>
+          <t>Capability length (1 octet): variable</t>
+          <t>Capability value (1 octet): flags followed by the AFI/SAFI
+             of the session.</t>
+        </list></t>
+        <figure title="" suppress-title="false" align="left" alt="" width="" height="">
+        <artwork xml:space="preserve" name="" type="" align="left" alt="" width="" height="">
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |R|  Reserved   |       AFI                     |     SAFI      |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+        </artwork>
+        </figure>
+        <t>R - indicates this session is a restart.</t>
+        <t>Reserved - MUST be set to zero by sender, MUST be ignored 
+          by receiver.</t>
+        <t>AFI/SAFI - //****whether to have AFI/SAFI here or use MP-BGP capability</t>
+        <t>When BGP multisession is enabled, BGP speaker MUST advertise
+        Multisession capability in OPEN message on every session.</t>
     </section>
 
     <section title="Modifications to FSM">
@@ -172,6 +204,8 @@
 <back>
     <references title="Normative References">
         &rfc2119;
+        &rfc4271;
+        &rfc5492;
         &rfc8174;
         &rfc9000;
         &I-D.chen-idr-bgp-over-quic;
