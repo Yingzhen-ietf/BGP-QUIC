@@ -2,6 +2,7 @@
     <!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
         <!ENTITY rfc2119 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml'>
         <!ENTITY rfc4271 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4271.xml'>
+        <!ENTITY rfc4760 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4760.xml'>
         <!ENTITY rfc5492 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.5492.xml'>
         <!ENTITY rfc8174 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.8174.xml'>
         <!ENTITY rfc9000 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9000.xml'>
@@ -240,6 +241,7 @@
     <references title="Normative References">
         &rfc2119;
         &rfc4271;
+        &rfc4760;
         &rfc5492;
         &rfc8174;
         &rfc9000;
