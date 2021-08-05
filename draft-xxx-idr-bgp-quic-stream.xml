@@ -132,8 +132,15 @@
          -- Backwards Compatibility (with draft-chen-idr-bgp-over-quic)</t>
 
       <section title="QUIC Multi-streams">
-        <t>In QUIC, multiple streams can be multiplexed onto an underlying
-          connection. Each stream is a separate "order stream of bytes".
+        <t>QUIC is a UDP-based multiplexed and secure transport protocol.
+          It provides connection-oriented and stateful interaction between
+          a client and server. QUIC integrates TLS and allow the exchange
+          of application data as soon as possible.</t>
+
+        <t>In QUIC, application protocols exchange information via streams,
+          and multiple streams can be multiplexed onto an underlying
+          connection. Each stream is a separate unidirectional or
+          bidirectional channel of "order stream of bytes".
           Each stream has flow control which limits bytes sent on a
           stream.</t>
       </section>
@@ -202,6 +209,7 @@
     </section>
 
     <section title="Operational Considerations">
+      <section title="Backford Compatibility">
       <t>For backward compatibility, it is important for multisession
         capable BGP speaker to be able to interoperate with BGP speakers
         which are not multisession capable. There are a few possible
@@ -209,11 +217,26 @@
         <list style="empty">
           <t>ssss</t>
         </list></t>
+      </section>
+      <section title="Session Prioritization">
+        <t>One of the major drawbacks of a single session BGP is that
+          packets from all AFI/SAFI are sent through this single session,
+          and this may cause resource contention.</t>
+        <t>QUIC does not provide a mechanism or exchanging prioritization
+          information. It relies on the application's receiving priority
+          information. QUIC <xref target="RFC9000"/> suggests an
+          implementation SHOULD provide ways for an application to indicate
+          the relative priority of streams. BGP sessions should be created
+          using different priorities. AFI/SAFI that carries routing
+          information should be given higher priority.</t>
+      </section>
+      <section title="Other Considerations">
       <t>A configuration command SHOULD be implemented to enable or
         disable multisession.</t>
       <t>Implementations supporting multisession BGP SHOULD have show commands
         to view the state of each individual session, notifications and
         logs.</t>
+      </section>
     </section>
     <section title="Security Considerations">
       <t>This document does not change the BGP security model.
