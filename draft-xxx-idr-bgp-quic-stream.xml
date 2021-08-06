@@ -78,6 +78,34 @@
 	    communication.
     </t>
     <t>
+      Multiprotocol Extensions for BGP-4 (MP-BGP) <xref target="RFC4760"/>
+      allows BGP to carry information for multiple address families and
+      sub-families.  However, only a single TCP connection can reach the
+      Established state with each peer <xref target="RFC4271"/>.
+    </t>
+    <t>
+      As pointed out by <xref target="I-D.ietf-idr-bgp-multisession"/>, there
+      are some disadvantages of using a single BGP session:
+    <list style="empty">
+      <t>
+        A common criticism of BGP is the fact that most malformed messages
+        cause the session to be terminated.  While this behavior is necessary
+        for protocol correctness, one may observe that the protocol machinery
+        of a given implementation may only be defective with respect to a
+        given AFI/SAFI.  Thus, it would be desirable to allow the session
+        related to that family to be terminated while leaving other AFI/SAFI
+        unaffected.  As BGP is commonly deployed, this is not possible.
+      </t>
+      <t>
+        A second criticism of BGP is that it is difficult or in some cases
+        impossible to manage control plane resource contention when BGP is
+        used to support diverse services over a single session.  In contrast,
+        if a single BGP session carries only information for a single service
+        (or related set of services) it may be easier to manage such
+        contention.
+      </t>
+    </list></t>
+    <t>
       QUIC <xref target="RFC9000"/> is a new UDP-based multiplexed and secure
       transport protocol. QUIC can provide low latency and encrypted transport
       with resilient connections.  <xref target="I-D.chen-idr-bgp-over-quic"/>
@@ -93,45 +121,6 @@
         "MAY", and "OPTIONAL" in this document are to be interpreted as
         described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/>
         when, and only when, they appear in all capitals, as shown here.</t>
-    </section>
-
-    <section title="Motivation">
-      <section title="One TCP Session">
-        <t>Multiprotocol Extensions for BGP-4 (MP-BGP)
-          <xref target="RFC4760"/> allows BGP to carry
-          information for multiple address families and sub-families,
-          however it only allows a single ESTABLISHED connection with
-          each peer. </t>
-        <t>As pointed out by <xref target="I-D.ietf-idr-bgp-multisession"/>,
-        there are some disadvantages of using a single BGP session. It
-        is summarized as the following:
-        <list style="empty">
-          <t>Most malformed messages cause BGP session to be terminated,
-            and this causes all AFI/SAFIs to reset, while a malformed
-            message may only impact a given AFI/SAFI. It is desirable
-            to allow the impacted AFI/SAFI to be terminated or reset
-            while leaving other AFI/SAFI unaffected.
-          </t>
-          <t>Since all AFI/SAFI packets are multiplexed into a single
-            BGP session, there would be resource contention when in some
-            cases. Ideally packets for routes update should be given
-            higher priorities, for example packets for IPv4 unicast
-            route update should have a higher priority than packets for
-            sending flow spec.
-          </t>
-        </list></t>
-
-      </section>
-      <section title="BGP over QUIC">
-        <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP
-        over QUIC. Section 4.3 describes a few options of how to map BGP
-        traffic to QUIC streams in order to solve the head-of-line
-        issues, but how BGP routers would interoperate with multi
-        streams is not defined.</t>
-        <t>This draft defines a mechanism to support BGP multisessions
-          using QUIC streams.</t>
-      </section>
-
     </section>
 
     <section title="Multi-Stream Capability">
