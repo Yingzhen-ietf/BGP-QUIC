@@ -11,7 +11,7 @@
         <!ENTITY I-D.ietf-idr-bgp-multisession PUBLIC ''
       'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-idr-bgp-multisession-07.xml'>
         ]>
-<?rfc  toc="yes"?>
+<?rfc toc="yes"?>
 <?rfc tocompact="no"?>
 <?rfc tocdepth="6"?>
 <?rfc symrefs="yes"?>
@@ -60,7 +60,9 @@
     <area>Routing</area>
     <workgroup>IDR Workgroup</workgroup>
     <abstract>
-      <t>This draft proposes to use QUIC streams in BGP.
+      <t>
+        This document specifies the use of QUIC Streams to support multiple BGP
+        sessions over one connection in order to achieve high ressiliency.
       </t>
     </abstract>
   </front>
@@ -70,18 +72,18 @@
   <middle>
     <section title="Introduction">
 	  <t>
-	    Border Gateway Protocol (BGP) uses TCP as its transport protocol.
-      BGP establishes peer relationship between routers using a TCP session
-      on port 179. TCP provides reliable packet communication.
+	    Border Gateway Protocol (BGP) <xref target="RFC4271"/> uses TCP as its
+	    transport protocol.  BGP establishes peer relationship between routers
+	    using a TCP session on port 179. TCP provides reliable packet
+	    communication.
     </t>
-    <t>QUIC <xref target="RFC9000"/> is a new UDP-based multiplexed and
-    secure transport protocol. QUIC can provide low latency and encrypted
-    transport with resilient connections.
-    </t>
-    <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP over QUIC
-    and the corresponding procedures. Complementary to
-    <xref target="I-D.chen-idr-bgp-over-quic"/>, this draft introduces a
-    mechanism of supporting BGP multisessions using multiple QUIC streams.
+    <t>
+      QUIC <xref target="RFC9000"/> is a new UDP-based multiplexed and secure
+      transport protocol. QUIC can provide low latency and encrypted transport
+      with resilient connections.  <xref target="I-D.chen-idr-bgp-over-quic"/>
+      specifies the procedure to use BGP over QUIC. Complementary to it, this
+      document specifies a mechanism to support BGP multisessions using QUIC
+      streams.
 	  </t>
     </section>
 
