@@ -26,15 +26,22 @@
 
     <author initials="A" surname="Retana"
     fullname="Alvaro Retana">
-      <organization>Futurewei</organization>
+      <organization>Futurewei Technologies, Inc.</organization>
 
       <address>
-       <email>aretana.ietf@gmail.com</email>
+        <postal>
+          <street>2330 Central Expressway</street>
+          <city>Santa Clara</city>
+          <region>CA</region>
+          <code>95050</code>
+          <country>USA</country>
+        </postal>
+       <email>aretana@futurewei.com</email>
       </address>
     </author>
 
     <author fullname="Yingzhen Qu" initials="Y" surname="Qu">
-      <organization>Futurewei</organization>
+      <organization>Futurewei Technologies, Inc.</organization>
       <address>
         <postal>
           <street>2330 Central Expressway</street>
@@ -74,7 +81,7 @@
     <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP over QUIC
     and the corresponding procedures. Complementary to
     <xref target="I-D.chen-idr-bgp-over-quic"/>, this draft introduces a
-    mechanism of supporting BGP multisessions using multiple QUIC streams. 
+    mechanism of supporting BGP multisessions using multiple QUIC streams.
 	  </t>
     </section>
 
@@ -90,7 +97,7 @@
       <section title="One TCP Session">
         <t>Multiprotocol Extensions for BGP-4 (MP-BGP)
           <xref target="RFC4760"/> allows BGP to carry
-          information for multiple address families and sub-families, 
+          information for multiple address families and sub-families,
           however it only allows a single ESTABLISHED connection with
           each peer. </t>
         <t>As pointed out by <xref target="I-D.ietf-idr-bgp-multisession"/>,
@@ -105,7 +112,7 @@
           </t>
           <t>Since all AFI/SAFI packets are multiplexed into a single
             BGP session, there would be resource contention when in some
-            cases. Ideally packets for routes update should be given 
+            cases. Ideally packets for routes update should be given
             higher priorities, for example packets for IPv4 unicast
             route update should have a higher priority than packets for
             sending flow spec.
@@ -114,7 +121,7 @@
 
       </section>
       <section title="BGP over QUIC">
-        <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP 
+        <t><xref target="I-D.chen-idr-bgp-over-quic"/> proposes BGP
         over QUIC. Section 4.3 describes a few options of how to map BGP
         traffic to QUIC streams in order to solve the head-of-line
         issues, but how BGP routers would interoperate with multi
@@ -122,7 +129,7 @@
         <t>This draft defines a mechanism to support BGP multisessions
           using QUIC streams.</t>
       </section>
-	
+
     </section>
 
     <section title="Multi-Stream Capability">
@@ -166,7 +173,7 @@
           error, such as malformed message, in one session that requires
           the session to be terminated or reset, it SHOULD only reset
           the session impacted, not any other sessions.</t>
-      </section>    
+      </section>
     </section>
 
     <section title="Use of Multiple OPEN Messages">
@@ -189,18 +196,18 @@
         </artwork>
         </figure>
         <t>R - indicates this session is a restart.</t>
-        <t>Reserved - MUST be set to zero by sender, MUST be ignored 
+        <t>Reserved - MUST be set to zero by sender, MUST be ignored
           by receiver.</t>
         <t>AFI/SAFI - //****whether to have AFI/SAFI here or use MP-BGP capability</t>
         <t>When BGP multisession is enabled, BGP speaker MUST advertise
         Multisession capability in OPEN message on every session.</t>
         <t>When BGP over QUIC is used, multisession should be enabled
           by default, unless configured otherwise. BGP speaker MUST
-          advertise Multisession Capability in then OPEN message on 
+          advertise Multisession Capability in then OPEN message on
           every session. When a multisession capable BGP speaker receives
           an OPEN message without Mutisession Capability, it MUST assume
           the peer is not multisession capable, and fall back to single
-          session BGP.</t> 
+          session BGP.</t>
     </section>
 
     <section title="Modifications to FSM">
@@ -252,7 +259,7 @@
         <xref target="I-D.ietf-idr-bgp-multisession"/>, and we are grateful
         for their contributions.</t>
       <t>
-      The authors would like to thank xx for review and comments. 
+      The authors would like to thank xx for review and comments.
       </t>
     </section>
 
