@@ -262,16 +262,24 @@
     </section>
 
     <section title="Modifications to FSM">
-      <t> TBD.
+      <t>This document does not modify BGP FSM except the collision
+        handling procedure.
       </t>
     </section>
 
     <section title="Operational Considerations">
       <section title="Backford Compatibility">
-      <t>For backward compatibility, it is important for multisession
+        <t>For backward compatibility, it is important for multisession
         capable BGP speaker to be able to interoperate with BGP speakers
-        which are not multisession capable. There are a few possible
-        scenarios listed below:
+        which are not multisession capable. In such case, the BGP speaker
+        should behave as defined in <xref target="I-D.chen-idr-bgp-over-quic"/>
+        and <xref target="RFC4271"/>.</t>
+        <t>If local BGP speaker is trying to run multisession and receives
+          an OPEN message that doesn't include MSC, the BGP speaker MUST
+          close the session and send a NOTIFICATION as described in
+          <xref target="notifications" format="default"/>.
+
+        <t>There are a few possible scenarios listed below:
         <list style="empty">
           <t>ssss</t>
         </list></t>
