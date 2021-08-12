@@ -277,7 +277,7 @@
         <t>If local BGP speaker is trying to run multisession and receives
           an OPEN message that doesn't include MSC, the BGP speaker MUST
           close the session and send a NOTIFICATION as described in
-          <xref target="notifications" format="default"/>.
+          <xref target="notifications" format="default"/>.</t>
 
         <t>There are a few possible scenarios listed below:
         <list style="empty">
