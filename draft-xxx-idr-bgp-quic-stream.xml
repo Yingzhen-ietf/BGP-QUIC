@@ -113,7 +113,13 @@
       document specifies a mechanism to support BGP multisessions using QUIC
       streams.
 	  </t>
-    </section>
+    <t>
+      Each session operates independently. An error on one session has
+      no impacts on any other session. Protocol modifications proposed
+      in the document is limited to the OPEN exchange state, mainly
+      connection collision detection.</t>
+    <t>Sessions are distinguished by the single or a group of AFI/SAFI
+      carried in MP-BGP Capability <xref target="RFC5492"/> in OPEN message.</t>
 
     <section title="Requirements Language">
        <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
@@ -122,15 +128,13 @@
         described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/>
         when, and only when, they appear in all capitals, as shown here.</t>
     </section>
+    </section>
 
-    <section title="Multi-Stream Capability">
-      <t>-- Only valid for BGP over QUIC; ignore otherwise
-         -- Options: control session vs complete independence
-         --- Keepalives
-         -- Backwards Compatibility (with draft-chen-idr-bgp-over-quic)</t>
 
+    <section title="BGP Multisessions">
       <section title="QUIC Multi-streams">
-        <t>QUIC is a UDP-based multiplexed and secure transport protocol.
+        <t>QUIC <xref target="RFC9000"/> is a UDP-based multiplexed and
+          secure transport protocol.
           It provides connection-oriented and stateful interaction between
           a client and server. QUIC integrates TLS and allows the exchange
           of application data as soon as possible.</t>
@@ -142,37 +146,30 @@
           Each stream has flow control which limits bytes sent on a
           stream, together with flow control of the connection.</t>
       </section>
-      <section title="Multiple BGP sessions over QUIC streams">
-        <t>This draft proposes to start BGP peering sessions based on
-          AFI/SAFI. It's possible to map sessions use different options
-          , such as proposed in <xref target="I-D.chen-idr-bgp-over-quic"/>,
-          but that's out of scope of this draft.
+      <section title="Multiple BGP Sessions Using QUIC Streams">
+        <t>For BGP over QUIC, there are different options to map streams,
+          such as proposed in <xref target="I-D.chen-idr-bgp-over-quic"/>.
+          This document proposes a different mechanism to use QUIC
+          streams, and it's complementary and compatible with
+          <xref target="I-D.chen-idr-bgp-over-quic"/>.
+        </t>
+        <t>This draft proposes BGP multisessions using QUIC streams.
+          (do we need to support multiple streams per session??)
+          Each BGP session is for one or a group of AFI/SAFIs carried
+          in one QUIC stream. Although the most natural way is to have one
+          AFI/SAFI in one BGP session, it is possible to group some
+          AFI/SAFIs in one session. For example, an operator may want to
+          group BGP-LS SAFIs (AFI 16288, SAFI 71 and 72) together.
         </t>
         <t>Connection Collision Detection procedure of the BGP specification
           <xref target="RFC4271"/> needs to be modified to allow using
           AFI/SAFI to determine the session uniqueness. Each BGP session
-          operates independently.</t>
+          operates independently, which means critical conditions (such
+          as malformed message) in one session won't affect others.</t>
         <t>A QUIC stream is created by sending a BGP OPEN message, and
           each stream MUST be bidirectional as described in section 2.1
-          of <xref target="RFC9000"/>.
-          Before creating a new session, it should be checked that
-          no session exists for the AFI/SAFI peers. If there is an
-          existing session for the AFI/SAFI peers, a BGP speaker SHOULD
-          NOT attempt to create a new session, and a local error may be
-          logged.</t>
-        <t>If a BGP speaker receives an OPEN message and there is already
-          an existing session in ESTABLISHED state for the same AFI/SAFI,
-          it MUST ignore this OPEN message and close the session. A
-          NOTIFICATION as described in section 5 SHOULD be sent.</t>
-        <t>Upon receiving of an OPEN message, if there is a session in
-          OpenConfirm or OpenSent state and the two sessions are for the
-          same AFI/SAFI, it is considered as a session collide, the
-          procedure from section 6.8 of <xref target="RFC4271"/> MUST
-          be applied, except the NOTOFICATION type.</t>
-        <t>When a BGP speaker is running multisessions, and there is an
-          error, such as malformed message, in one session that requires
-          the session to be terminated or reset, it SHOULD only reset
-          the session impacted, not any other sessions.</t>
+          of <xref target="RFC9000"/>. The MP-BGP capability in the OPEN
+          message is used to identify the session. </t>
         <t>When a session needs to be terminated for some reason, both
           directions of the bidirectional stream MUST be terminated.</t>
       </section>
@@ -187,78 +184,127 @@
         otherwise.</t>
       <t>Using the MSC allows peers to establish multiple BGP sessions,
         one per QUIC stream. EACH BGP session sends its own OPEN message.
-        The operation of BGP <xref target="RFC4271"/> remains unchanged,
-        per session. [Follow up on details.] </t>
+        The operation of BGP <xref target="RFC4271"/> remains unchanged.
+      </t>
       <t>All the OPEN message exchanged MUST include the MSC. If one of
         the additional stream-based sessions doesn't include the MSC,
         then it MUST be closed with a NOTIFICTION as described in
         <xref target="notifications" format="default"/>.</t>
-      <t>MSC is simply a set of flags and is defined as below:
+      <t>MSC is defined as below:
         <list style="empty">
           <t>Capability code (1 octet): TBD</t>
-          <t>Capability length (1 octet): variable</t>
-          <t>Capability value (1 octet): flags followed by the AFI/SAFI
-             of the session.</t>
+          <t>Capability length (1 octet): TBD</t>
+          <t>Capability value (1 octet): flag field reserved.</t>
         </list></t>
         <figure title="" suppress-title="false" align="left" alt="" width="" height="">
         <artwork xml:space="preserve" name="" type="" align="left" alt="" width="" height="">
    0 1 2 3 4 5 6 7 
   +-+-+-+-+-+-+-+-+
-  |R|  Reserved   |
+  |   Reserved    |
   +-+-+-+-+-+-+-+-+
 
         </artwork>
         </figure>
-        <t>R - indicates this session is a restart.</t>
         <t>Reserved - MUST be set to zero by sender, MUST be ignored
           by receiver.</t>
-        <t>The AFI/SAFI included in this session is identified by
-          MP-BGP capability.</t>
-        <t>When BGP multisession is enabled, BGP speaker MUST advertise
-        Multisession capability in OPEN message on every session.</t>
-        <t>When BGP over QUIC is used, multisession should be enabled
+        <t>The AFI/SAFI included in this session is identified by the
+          MP-BGP capability in the OPEN message.</t>
+        <t>When BGP over QUIC is used, multisession is enabled
           by default, unless configured otherwise. BGP speaker MUST
           advertise Multisession Capability in the OPEN message on
           every session. When a multisession capable BGP speaker receives
-          an OPEN message without Mutisession Capability, it MUST assume
+          an OPEN message without MSC, it MUST assume
           the peer is not multisession capable, and fall back to single
           session BGP. A NOTIFICATION SHOULD be sent as described in
           <xref target="notifications" format="default"/>.</t>
-        <t>WHen BGP multisession is disabled, a BGP speaker SHOULD NOT
+        <t>When BGP multisession is enabled, BGP speaker MUST advertise
+        Multisession capability in OPEN message on every session.</t>
+        <t>When BGP multisession is disabled, a BGP speaker SHOULD NOT
           send OPEN message with MSC.</t>
         <t>For a given pair of BGP peers, when BGP multisession is used,
           all sessions MUST be created using OPEN message with MSC, one
-          session/stream for one AFI/SAFI. It MUST NOT be combined with
-          a session for multiple AFI/SAFIs.</t>
+          session/stream for one or a group of AFI/SAFIs. It MUST NOT
+          be combined with a session created without using MSC.</t>
         <t>After a BGP speaker receives an OPEN message with MSC and it
           validates the message and proceeds with the session, the
           original Finite State Machine applies.</t>
-        <t>It is up to the implementation to decide whether to handle
-          such session in the same process or thread.</t>
     </section>
 
     <section anchor="notifications" title="New NOTIFICATIONs">
-     <t>A BGP <xref target="RFC4271"/> NOTIFICATION message is sent when
-     there is an error condition. OPEN message error handling is defined
-     in section 6.2, this document defines the following subcodes to the
-     NOTIFICATION message.
+     <t>A BGP NOTIFICATION message is sent when there is an error
+      condition. OPEN message error handling is defined in section 6.2
+      of <xref target="RFC4271"/>. This document adds the following
+      subcodes to the NOTIFICATION message.
      </t>
      <t>This document introduces the following new subcodes for OPEN
       Message Error Code:
       <list style="empty">
-        <t>10 - Capability Session Conflict - When there are existing
+        <t>10 - MultiSession Conflict - When there are existing
           BGP sessions created with MSC, and an OPEN message received
           without MSC. Or there is an existing BGP session established
           without MSC and an OPEN message received with MSC.
         </t>
-        <t>11 - Session Mismatch - When a BGP speaker sends an OPEN
+        <t>11 - Session Capability Mismatch - When a BGP speaker sends an OPEN
           message with MSC, but received an OPEN message without MSC.
         </t>
         <t>12 - AFI/SAFI Mismatch - When there is an existing BGP session
           for an AFI/SAFI, and a new OPEN message is received to create
-          a session for the AFI/SAFI.
+          a session for the AFI/SAFI, or the MP-BGP Capability in the
+          OPEN message overlaps with existing sessions.
         </t>
       </list></t>
+      <t>Note: The numbers used here are proposals to IANA.</t>
+    </section>
+
+    <section title="Connection and Collision">
+      <t>To detect Connection Collision, base BGP protocol 
+        <xref target="RFC4271"/> uses only IP addresses
+        as the sole consideration. BGP multisession proposed in this
+        document also takes into account the AFI/SAFI carried in a
+        session. A session is considered unique if the AFI/SAFI carried
+        in the session is not carried in any other session.</t>
+      <t>Before creating a new session, a BGP speaker should check that
+        no session exists for the AFI/SAFI included in MP-BGP capability.
+        If there is an existing session for any of the AFI/SAFI, a BGP
+        speaker SHOULD NOT attempt to create a new session, and a local
+        error may be logged.</t>
+      <t>If BGP multisession is disabled or not supported on the local
+        BGP speaker, and an OPEN message is received with MSC, the local
+        BGP speaker will send an OPEN message without MSC.</t> 
+      <t>When BGP multisession is enabled, a BGP speaker MUST send OPEN
+        message with MSC.</t>
+      <t>Upon receiving of an OPEN message, if the local BGP speaker is
+        set to run multisession but there is no session created yet,
+        and the received OPEN message doesn't include MSC, the connection
+        can proceed as if there is described in
+        <xref target="I-D.chen-idr-bgp-over-quic"/>. If there are
+        existing sessions created with MSC, then the local BGP speaker
+        MUST close the session and send a NOTIFICATION as described in
+        <xref target="notifications" format="default"/>.</t>
+      <t>If a BGP speaker receives an OPEN message and there is already
+        an existing session in ESTABLISHED state for any of the AFI/SAFI,
+        it MUST ignore this OPEN message and close the session. A
+        NOTIFICATION as described in <xref target="notifications"/>
+        SHOULD be sent.</t>
+      <t>Upon receiving of an OPEN message, if there is a session in
+        OpenConfirm or OpenSent state and the two sessions are for the
+        same AFI/SAFI, it is considered as a session collide, the
+        procedure from section 6.8 of <xref target="RFC4271"/> MUST
+        be applied, except the NOTOFICATION type.</t>
+      <t>Upon receiving of an OPEN message, if there is no session
+        exists for any of the AFI/SAFI carried in the MP-BGP Capability,
+        the session will proceed when either of the following condition
+        is met:
+        <list style="empty">
+        <t>This is only a single AFI/SAFI in the MP-BGP Capability,
+          and the local BGP speaker also has this AFI/SAFI.</t>
+        <t>There are multiple AFI/SAFIs in the MP-BGP Capability, and
+          they match the local configuration of a group AFI/SAFIs to be
+          combined in one session.</t>
+        </list></t>
+      <t>If neither of the conditions is met, a NOTIFICATION SHOULD be
+        sent as described in <xref target="notifications"/>.</t>
+
     </section>
 
     <section title="Modifications to FSM">
@@ -272,31 +318,24 @@
         <t>For backward compatibility, it is important for multisession
         capable BGP speaker to be able to interoperate with BGP speakers
         which are not multisession capable. In such case, the BGP speaker
-        should behave as defined in <xref target="I-D.chen-idr-bgp-over-quic"/>
+        should behave as described in <xref target="I-D.chen-idr-bgp-over-quic"/>
         and <xref target="RFC4271"/>.</t>
-        <t>If local BGP speaker is trying to run multisession and receives
-          an OPEN message that doesn't include MSC, the BGP speaker MUST
-          close the session and send a NOTIFICATION as described in
-          <xref target="notifications" format="default"/>.</t>
-
-        <t>There are a few possible scenarios listed below:
-        <list style="empty">
-          <t>ssss</t>
-        </list></t>
       </section>
       <section title="Session Prioritization">
         <t>One of the major drawbacks of a single session BGP is that
           packets from all AFI/SAFI are sent through this single session,
           and this may cause resource contention.</t>
-        <t>QUIC does not provide a mechanism or exchanging prioritization
-          information. It relies on the application's receiving priority
-          information. QUIC <xref target="RFC9000"/> suggests an
+        <t>QUIC <xref target="RFC9000"/> does not provide a mechanism
+          or exchanging prioritization information. It relies on the
+          application's receiving priority information and each QUIC
+          stream is flow controlled independently. QUIC suggests an
           implementation SHOULD provide ways for an application to indicate
           the relative priority of streams. BGP sessions should be created
           using different priorities. For example, AFI/SAFI that carries
           routing information SHOUD be given higher priority and generous
-          flow control. This can be achieved using an explicit
-          configuration.</t>
+          flow control.</t> 
+        <t>An implementation SHOULD support explicit configuration of
+          session priorities.</t>
       </section>
       <section title="BGP Timers">
         <t>BGP timers are defined in section 10 of <xref target="RFC4271"/>.
@@ -310,10 +349,13 @@
       <section title="Other Considerations">
       <t>A configuration command SHOULD be implemented to enable or
         disable multisession.</t>
+      <t>A configuration command SHOULD be implemented to allow grouping
+        of some AFI/SAFIs into one session.</t>
       <t>Implementations supporting multisession BGP SHOULD have show commands
         to view the state of each individual session, notifications and
         logs.</t>
-
+      <t>It is up to the implementation to decide whether to handle
+        such session in the same process or thread.</t>
       </section>
     </section>
     <section title="Security Considerations">
