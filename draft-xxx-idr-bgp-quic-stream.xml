@@ -231,13 +231,11 @@
     </section>
 
     <section anchor="notifications" title="New NOTIFICATIONs">
-     <t>A BGP NOTIFICATION message is sent when there is an error
-      condition. OPEN message error handling is defined in section 6.2
-      of <xref target="RFC4271"/>. This document adds the following
-      subcodes to the NOTIFICATION message.
-     </t>
-     <t>This document introduces the following new subcodes for OPEN
-      Message Error Code:
+      <t>A BGP NOTIFICATION message is sent when there is an error
+        condition.</t>
+      <t>OPEN message error handling is defined in section 6.2
+      of <xref target="RFC4271"/>. This document introduces the following
+      subcodes for OPEN Message Error Code:
       <list style="empty">
         <t>10 - MultiSession Conflict - When there are existing
           BGP sessions created with MSC, and an OPEN message received
@@ -253,7 +251,16 @@
           OPEN message overlaps with existing sessions.
         </t>
       </list></t>
-      <t>Note: The numbers used here are proposals to IANA.</t>
+      <t>A BGP peer MAY choose to close its BGP connection by sending
+        the NOTIFICATION message with the Error Code Cease as described
+        in section 6.7 of <xref target="RFC4271"/>. This document
+        introduces an Error subcode in CEASE message:
+        <list style="empty">
+          <t>1 - Cease stream - When a BGP speaker chooses to close a
+            stream based session with its peer.</t>
+        </list></t>
+      <t>Note: The numbers proposed in this section are to be approved
+        by IANA.</t>
     </section>
 
     <section title="Connection and Collision">
