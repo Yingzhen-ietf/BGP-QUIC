@@ -72,16 +72,16 @@
   <middle>
     <section title="Introduction">
 	  <t>
-	    Border Gateway Protocol (BGP) <xref target="RFC4271"/> uses TCP as its
-	    transport protocol.  BGP establishes peer relationship between routers
-	    using a TCP session on port 179. TCP provides reliable packet
+	    The Border Gateway Protocol (BGP) <xref target="RFC4271"/> uses TCP as
+	    its transport protocol.  BGP establishes peer relationship between
+      routers using a TCP session on port 179. TCP provides reliable packet
 	    communication.
     </t>
     <t>
       Multiprotocol Extensions for BGP-4 (MP-BGP) <xref target="RFC4760"/>
-      allows BGP to carry information for multiple address families and
-      sub-families.  However, only a single TCP connection can reach the
-      Established state with each peer <xref target="RFC4271"/>.
+      allow BGP to carry information for multiple Network Layer protocols.
+      However, only a single TCP connection can reach the Established state
+      with each peer <xref target="RFC4271"/>.
     </t>
     <t>
       As pointed out by <xref target="I-D.ietf-idr-bgp-multisession"/>, there
@@ -106,7 +106,7 @@
       </t>
     </list></t>
     <t>
-      QUIC <xref target="RFC9000"/> is a new UDP-based multiplexed and secure
+      QUIC <xref target="RFC9000"/> is an UDP-based multiplexed and secure
       transport protocol. QUIC can provide low latency and encrypted transport
       with resilient connections.  <xref target="I-D.chen-idr-bgp-over-quic"/>
       specifies the procedure to use BGP over QUIC. Complementary to it, this
@@ -115,11 +115,15 @@
 	  </t>
     <t>
       Each session operates independently. An error on one session has
-      no impacts on any other session. Protocol modifications proposed
-      in the document is limited to the OPEN exchange state, mainly
-      connection collision detection.</t>
-    <t>Sessions are distinguished by the single or a group of AFI/SAFI
-      carried in MP-BGP Capability <xref target="RFC5492"/> in OPEN message.</t>
+      no impact on any other session.  The BGP modification proposed
+      in the document is limited to the OPEN exchange, mainly
+      connection collision detection.
+    </t>
+    <t>
+      Sessions are distinguished by the Network Layer protocol(s) negotiated
+      in the OPEN message.  Multiple Network Layer protocol are negotiated
+      using the Multiprotocol Extensions capability <xref target="RFC4760"/>.
+    </t>
 
     <section title="Requirements Language">
        <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
@@ -147,19 +151,13 @@
           stream, together with flow control of the connection.</t>
       </section>
       <section title="Multiple BGP Sessions Using QUIC Streams">
-        <t>For BGP over QUIC, there are different options to map streams,
-          such as proposed in <xref target="I-D.chen-idr-bgp-over-quic"/>.
-          This document proposes a different mechanism to use QUIC
-          streams, and it's complementary and compatible with
-          <xref target="I-D.chen-idr-bgp-over-quic"/>.
-        </t>
-        <t>This draft proposes BGP multisessions using QUIC streams.
-          (do we need to support multiple streams per session??)
-          Each BGP session is for one or a group of AFI/SAFIs carried
-          in one QUIC stream. Although the most natural way is to have one
-          AFI/SAFI in one BGP session, it is possible to group some
-          AFI/SAFIs in one session. For example, an operator may want to
-          group BGP-LS SAFIs (AFI 16288, SAFI 71 and 72) together.
+        <t>
+          BGP over QUIC <xref target="I-D.chen-idr-bgp-over-quic"/> proposes
+          different options to map streams.  This document specifies a
+          complementary and backwards compatible mechanism to achieve BGP
+          multisessions using QUIC streams.  A simple implementation is to
+          assign one Network Layer protocol to one BGP session, but it is
+          possible to group multiple Network Layer protocols in one session.
         </t>
         <t>Connection Collision Detection procedure of the BGP specification
           <xref target="RFC4271"/> needs to be modified to allow using
@@ -175,22 +173,12 @@
       </section>
     </section>
 
-    <section title="Multisession Capability">
-      <t> A new BGP capability <xref target="RFC5492"/> code, Multisession
-      Capability (MSC), is added to indicate that a BGP speaker supports
-      multiple sessions. If both peers have not advertised the capability,
-      it cannot be used.</t>
-      <t>MSC applies only when QUIC is used. It MUST be ignored
-        otherwise.</t>
-      <t>Using the MSC allows peers to establish multiple BGP sessions,
-        one per QUIC stream. EACH BGP session sends its own OPEN message.
-        The operation of BGP <xref target="RFC4271"/> remains unchanged.
-      </t>
-      <t>All the OPEN message exchanged MUST include the MSC. If one of
-        the additional stream-based sessions doesn't include the MSC,
-        then it MUST be closed with a NOTIFICTION as described in
-        <xref target="notifications" format="default"/>.</t>
-      <t>MSC is defined as below:
+    <section title="MultiStream Capability">
+      <t>
+       The MultiStream Capability (MSC) is defined to indicate that a BGP
+       speaker supports multiple sessions as specified in this document.
+       The capability <xref target="RFC5492"/> is defined as follows:
+     </t>
         <list style="empty">
           <t>Capability code (1 octet): TBD</t>
           <t>Capability length (1 octet): TBD</t>
@@ -198,7 +186,7 @@
         </list></t>
         <figure title="" suppress-title="false" align="left" alt="" width="" height="">
         <artwork xml:space="preserve" name="" type="" align="left" alt="" width="" height="">
-   0 1 2 3 4 5 6 7 
+   0 1 2 3 4 5 6 7
   +-+-+-+-+-+-+-+-+
   |   Reserved    |
   +-+-+-+-+-+-+-+-+
@@ -207,27 +195,35 @@
         </figure>
         <t>Reserved - MUST be set to zero by sender, MUST be ignored
           by receiver.</t>
-        <t>The AFI/SAFI included in this session is identified by the
-          MP-BGP capability in the OPEN message.</t>
-        <t>When BGP over QUIC is used, multisession is enabled
-          by default, unless configured otherwise. BGP speaker MUST
-          advertise Multisession Capability in the OPEN message on
-          every session. When a multisession capable BGP speaker receives
-          an OPEN message without MSC, it MUST assume
-          the peer is not multisession capable, and fall back to single
-          session BGP. A NOTIFICATION SHOULD be sent as described in
-          <xref target="notifications" format="default"/>.</t>
-        <t>When BGP multisession is enabled, BGP speaker MUST advertise
-        Multisession capability in OPEN message on every session.</t>
-        <t>When BGP multisession is disabled, a BGP speaker SHOULD NOT
-          send OPEN message with MSC.</t>
-        <t>For a given pair of BGP peers, when BGP multisession is used,
-          all sessions MUST be created using OPEN message with MSC, one
-          session/stream for one or a group of AFI/SAFIs. It MUST NOT
-          be combined with a session created without using MSC.</t>
-        <t>After a BGP speaker receives an OPEN message with MSC and it
-          validates the message and proceeds with the session, the
-          original Finite State Machine applies.</t>
+        <t>
+          The MSC applies only when BGP over QUIC
+          <xref target="I-D.chen-idr-bgp-over-quic"/> is used.  It MUST be
+          ignored otherwise.
+        </t>
+        <t>
+          The specification in this document is used only if both peers
+          advertise the MSC during the establishment of the "initial session".
+          Otherwise the processes specified in
+          <xref target="I-D.chen-idr-bgp-over-quic"/> MUST be followed.  In
+          particular, if a peer that advertises the MSC doesn't receive an OPEN
+          message with the MSC from its peer, it SHOULD NOT terminate the
+          session.
+        </t>
+        <t>
+          Using the MSC allows peers to establish multiple BGP sessions, one
+          per QUIC stream.  Each new BGP session is established using its own
+          OPEN message <xref target="RFC4271"/> and MUST include the MSC.  If
+          the MSC was exchanged by both peers in the "initial session" but is
+          not present when establishing a new session, the session MUST be
+          terminated using a NOTIFICATION with error sub-code 10 (MultiStream
+          Conflict).
+        </t>
+        <t>
+          The MultiStream Capability SHOULD be enabled by default.
+        </t>
+        <t>
+          Once a BGP session is established, it follows the procedures
+          specified in <xref target="RFC4271"/>.</t>
     </section>
 
     <section anchor="notifications" title="New NOTIFICATIONs">
@@ -264,7 +260,7 @@
     </section>
 
     <section title="Connection and Collision">
-      <t>To detect Connection Collision, base BGP protocol 
+      <t>To detect Connection Collision, base BGP protocol
         <xref target="RFC4271"/> uses only IP addresses
         as the sole consideration. BGP multisession proposed in this
         document also takes into account the AFI/SAFI carried in a
@@ -277,7 +273,7 @@
         error may be logged.</t>
       <t>If BGP multisession is disabled or not supported on the local
         BGP speaker, and an OPEN message is received with MSC, the local
-        BGP speaker will send an OPEN message without MSC.</t> 
+        BGP speaker will send an OPEN message without MSC.</t>
       <t>When BGP multisession is enabled, a BGP speaker MUST send OPEN
         message with MSC.</t>
       <t>Upon receiving of an OPEN message, if the local BGP speaker is
@@ -340,7 +336,7 @@
           the relative priority of streams. BGP sessions should be created
           using different priorities. For example, AFI/SAFI that carries
           routing information SHOUD be given higher priority and generous
-          flow control.</t> 
+          flow control.</t>
         <t>An implementation SHOULD support explicit configuration of
           session priorities.</t>
       </section>
