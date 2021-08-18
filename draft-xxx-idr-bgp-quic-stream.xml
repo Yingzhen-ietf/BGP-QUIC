@@ -178,7 +178,7 @@
        The MultiStream Capability (MSC) is defined to indicate that a BGP
        speaker supports multiple sessions as specified in this document.
        The capability <xref target="RFC5492"/> is defined as follows:
-     </t>
+
         <list style="empty">
           <t>Capability code (1 octet): TBD</t>
           <t>Capability length (1 octet): TBD</t>
