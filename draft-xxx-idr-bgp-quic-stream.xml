@@ -384,13 +384,13 @@
               <td>Description</td>
               <td>Reference</td>
               <td>Change Controller</td>
-            <tr>
+            </tr>
             <tr>
               <td>TBD1</td>
               <td>MultiStream Capability</td>
               <td>[This Document]</td>
               <td>IETF</td>
-            <tr>
+            </tr>
           </tbody>
         </table>
       <t>
@@ -403,22 +403,22 @@
             <td>Value</td>
             <td>Name</td>
             <td>Reference</td>
-          <tr>
+          </tr>
           <tr>
             <td>TBD2</td>
             <td>MultiSession Conflicty</td>
             <td>[This Document]</td>
-          <tr>
+          </tr>
           <tr>
             <td>TBD3</td>
             <td>Session Capability Mismatch</td>
             <td>[This Document]</td>
-          <tr>
+          </tr>
           <tr>
             <td>TBD4</td>
             <td>Network Layer Protocol Mismatch</td>
             <td>[This Document]</td>
-          <tr>
+          </tr>
         </tbody>
       </table>
     </section>
