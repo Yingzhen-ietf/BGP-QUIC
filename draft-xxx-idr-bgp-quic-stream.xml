@@ -2,6 +2,7 @@
     <!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
         <!ENTITY rfc2119 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml'>
         <!ENTITY rfc4271 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4271.xml'>
+        <!ENTITY rfc4486 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4486.xml'>
         <!ENTITY rfc4760 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4760.xml'>
         <!ENTITY rfc5492 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.5492.xml'>
         <!ENTITY rfc8174 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.8174.xml'>
@@ -173,15 +174,15 @@
       </section>
     </section>
 
-    <section title="MultiStream Capability">
+    <section anchor="MSC" title="MultiStream Capability">
       <t>
        The MultiStream Capability (MSC) is defined to indicate that a BGP
        speaker supports multiple sessions as specified in this document.
        The capability <xref target="RFC5492"/> is defined as follows:
 
         <list style="empty">
-          <t>Capability code (1 octet): TBD</t>
-          <t>Capability length (1 octet): TBD</t>
+          <t>Capability code (1 octet): TBD1</t>
+          <t>Capability length (1 octet): 1 (TBC)</t>
           <t>Capability value (1 octet): flag field reserved.</t>
         </list></t>
         <figure title="" suppress-title="false" align="left" alt="" width="" height="">
@@ -214,9 +215,9 @@
           per QUIC stream.  Each new BGP session is established using its own
           OPEN message <xref target="RFC4271"/> and MUST include the MSC.  If
           the MSC was exchanged by both peers in the "initial session" but is
-          not present when establishing a new session, the session MUST be
-          terminated using a NOTIFICATION with error sub-code 10 (MultiStream
-          Conflict).
+          not present when establishing a new session, the session is
+          terminated and the Error Subcode MUST be set to MultiStream
+          Conflict (TBD2).
         </t>
         <t>
           The MultiStream Capability SHOULD be enabled by default.
@@ -226,37 +227,45 @@
           specified in <xref target="RFC4271"/>.</t>
     </section>
 
-    <section anchor="notifications" title="New NOTIFICATIONs">
-      <t>A BGP NOTIFICATION message is sent when there is an error
-        condition.</t>
-      <t>OPEN message error handling is defined in section 6.2
-      of <xref target="RFC4271"/>. This document introduces the following
-      subcodes for OPEN Message Error Code:
+    <section anchor="notifications" title="Error Handling">
+      <t>
+        OPEN message error handling is defined in section 6.2 of
+        <xref target="RFC4271"/>. This document introduces the following
+        OPEN Message Error subcodes:
       <list style="empty">
-        <t>10 - MultiSession Conflict - When there are existing
-          BGP sessions created with MSC, and an OPEN message received
-          without MSC. Or there is an existing BGP session established
-          without MSC and an OPEN message received with MSC.
+        <t>
+          TBD2 - MultiSession Conflict - Used if the MSC was exchanged by both peers in the "initial session" but is not present when establishing
+          a new session.
         </t>
-        <t>11 - Session Capability Mismatch - When a BGP speaker sends an OPEN
-          message with MSC, but received an OPEN message without MSC.
+        <t>
+          TBD3 - Session Capability Mismatch -  Used if a BGP speaker
+          terminates a session on the case where it sends an OPEN message with
+          the MSC, but receives an OPEN message without it.
         </t>
-        <t>12 - AFI/SAFI Mismatch - When there is an existing BGP session
-          for an AFI/SAFI, and a new OPEN message is received to create
-          a session for the AFI/SAFI, or the MP-BGP Capability in the
-          OPEN message overlaps with existing sessions.
+        <t>
+          TBD4 - Network Layer Protocol Mismatch - Used if a BGP session has
+          already been established for the signaled Network Layer Protocol,
+          either explicitly or as a superset.
         </t>
       </list></t>
-      <t>A BGP peer MAY choose to close its BGP connection by sending
-        the NOTIFICATION message with the Error Code Cease as described
-        in section 6.7 of <xref target="RFC4271"/>. This document
-        introduces an Error subcode in CEASE message:
-        <list style="empty">
-          <t>1 - Cease stream - When a BGP speaker chooses to close a
-            stream based session with its peer.</t>
-        </list></t>
-      <t>Note: The numbers proposed in this section are to be approved
-        by IANA.</t>
+      <t>
+        <xref target="MSC"/> recommends a BGP speaker to not terminate a
+        session if it advertises the MSC but doesn't receive an OPEN message
+        with the MSC from its peer.  If such a BGP speaker does terminate the
+        session, the Error Subcode MUST be set to Session Capability Mismatch
+        (TBD3).
+      </t>
+      <t>
+        Using the MSC the peers MAY set up more than one session for a specific
+        Network Layer protocol, or groups of protocols.  If this functionality
+        is not enabled and a BGP speaker terminates the session, the Error
+        Subcode MUST be set to Network Layer Protocol Mismatch (TBD4).
+      </t>
+      <t>
+        Any individual BGP session can be terminated as specified in
+        <xref target="RFC4486"/>.  If multiple sessions are to be terminated,
+        then the procedure MUST be followed for each one.
+      </t>
     </section>
 
     <section title="Connection and Collision">
@@ -366,14 +375,52 @@
       </t>
     </section>
     <section anchor="IANA" title="IANA Considerations">
-      <t>The document requests IANA to allocate a BGP Capability Code
-        as BGP QUIC Multisession Capability and the following new OPEN
-        Message Error subcodes:
-        <list style="empty">
-        <t>10 - Capability Session Conflict</t>
-        <t>11 - Session Mismatch</t>
-        <t>12 - AFI/SAFI Mismatch</t>
-      </list></t>
+      <t>
+        IANA is asked to assign a new Capability Code for the MultiStream Capablity (<xref target="MSC"/>) as follows:
+        <table>
+          <tbody>
+            <tr>
+              <td>Value</td>
+              <td>Description</td>
+              <td>Reference</td>
+              <td>Change Controller</td>
+            <tr>
+            <tr>
+              <td>TBD1</td>
+              <td>MultiStream Capability</td>
+              <td>[This Document]</td>
+              <td>IETF</td>
+            <tr>
+          </tbody>
+        </table>
+      <t>
+        IANA is asked to assign three values from the OPEN Message Error
+        subcodes registrty as follows:
+      </t>
+      <table>
+        <tbody>
+          <tr>
+            <td>Value</td>
+            <td>Name</td>
+            <td>Reference</td>
+          <tr>
+          <tr>
+            <td>TBD2</td>
+            <td>MultiSession Conflicty</td>
+            <td>[This Document]</td>
+          <tr>
+          <tr>
+            <td>TBD3</td>
+            <td>Session Capability Mismatch</td>
+            <td>[This Document]</td>
+          <tr>
+          <tr>
+            <td>TBD4</td>
+            <td>Network Layer Protocol Mismatch</td>
+            <td>[This Document]</td>
+          <tr>
+        </tbody>
+      </table>
     </section>
 
     <section title="Acknowledgement">
@@ -393,6 +440,7 @@
     <references title="Normative References">
         &rfc2119;
         &rfc4271;
+        &rfc4486;
         &rfc4760;
         &rfc5492;
         &rfc8174;
