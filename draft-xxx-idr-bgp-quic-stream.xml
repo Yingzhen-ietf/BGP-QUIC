@@ -376,7 +376,9 @@
     </section>
     <section anchor="IANA" title="IANA Considerations">
       <t>
-        IANA is asked to assign a new Capability Code for the MultiStream Capablity (<xref target="MSC"/>) as follows:
+        IANA is asked to assign a new Capability Code for the MultiStream
+        Capablity (<xref target="MSC"/>) as follows:
+      </t>
         <table>
           <tbody>
             <tr>
