@@ -374,55 +374,35 @@
       <t>This document does not change the BGP security model.
       </t>
     </section>
+
     <section anchor="IANA" title="IANA Considerations">
+
       <t>
         IANA is asked to assign a new Capability Code for the MultiStream
         Capablity (<xref target="MSC"/>) as follows:
       </t>
-        <table>
-          <tbody>
-            <tr>
-              <td>Value</td>
-              <td>Description</td>
-              <td>Reference</td>
-              <td>Change Controller</td>
-            </tr>
-            <tr>
-              <td>TBD1</td>
-              <td>MultiStream Capability</td>
-              <td>[This Document]</td>
-              <td>IETF</td>
-            </tr>
-          </tbody>
-        </table>
+        <texttable title="MultiStream Capability">
+          <ttcol>Value</ttcol>
+          <ttcol>Description</ttcol>
+          <ttcol>Reference</ttcol>
+          <ttcol>Change Controller</ttcol>
+          <c>TBD1</c>
+          <c>MultiStream Capability</c>
+          <c>[This Document]</c>
+          <c>IETF</c>
+        </texttable>
       <t>
         IANA is asked to assign three values from the OPEN Message Error
         subcodes registrty as follows:
       </t>
-      <table>
-        <tbody>
-          <tr>
-            <td>Value</td>
-            <td>Name</td>
-            <td>Reference</td>
-          </tr>
-          <tr>
-            <td>TBD2</td>
-            <td>MultiSession Conflicty</td>
-            <td>[This Document]</td>
-          </tr>
-          <tr>
-            <td>TBD3</td>
-            <td>Session Capability Mismatch</td>
-            <td>[This Document]</td>
-          </tr>
-          <tr>
-            <td>TBD4</td>
-            <td>Network Layer Protocol Mismatch</td>
-            <td>[This Document]</td>
-          </tr>
-        </tbody>
-      </table>
+      <texttable>
+        <ttcol>Value</ttcol>
+        <ttcol>Name</ttcol>
+        <ttcol>Reference</ttcol>
+        <c>TBD2</c> <c>MultiSession Conflicty</c> <c>[This Document]</c>
+        <c>TBD3</c> <c>Session Capability Mismatch</c> <c>[This Document]</c>
+        <c>TBD4</c> <c>Network Layer Protocol Mismatch</c><c>[This Document]</c>
+      </texttable>
     </section>
 
     <section title="Acknowledgement">
