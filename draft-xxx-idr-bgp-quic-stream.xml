@@ -220,9 +220,6 @@
           Conflict (TBD2).
         </t>
         <t>
-          The MultiStream Capability SHOULD be enabled by default.
-        </t>
-        <t>
           Once a BGP session is established, it follows the procedures
           specified in <xref target="RFC4271"/>.</t>
     </section>
@@ -249,9 +246,8 @@
         </t>
       </list></t>
       <t>
-        <xref target="MSC"/> recommends a BGP speaker to not terminate a
-        session if it advertises the MSC but doesn't receive an OPEN message
-        with the MSC from its peer.  If such a BGP speaker does terminate the
+        <xref target="MSC"/> recommends not terminating a session when only one
+        peer supports the MSC.  If such a BGP speaker does terminate the
         session, the Error Subcode MUST be set to Session Capability Mismatch
         (TBD3).
       </t>
@@ -326,48 +322,38 @@
     </section>
 
     <section title="Operational Considerations">
-      <section title="Backford Compatibility">
-        <t>For backward compatibility, it is important for multisession
-        capable BGP speaker to be able to interoperate with BGP speakers
-        which are not multisession capable. In such case, the BGP speaker
-        should behave as described in <xref target="I-D.chen-idr-bgp-over-quic"/>
-        and <xref target="RFC4271"/>.</t>
+      <section title="Backward Compatibility">
+        <t>
+          A BGP Speaker that doesn't understand the MSC will simply ignore it
+          <xref target="RFC5492"/> .  <xref target="MSC"/> recommends not
+          terminating a session when only one peer supports the MSC.  Instead,
+          the operation will continue as specified in
+          <xref target="I-D.chen-idr-bgp-over-quic"/>.
+        </t>
       </section>
-      <section title="Session Prioritization">
-        <t>One of the major drawbacks of a single session BGP is that
-          packets from all AFI/SAFI are sent through this single session,
-          and this may cause resource contention.</t>
-        <t>QUIC <xref target="RFC9000"/> does not provide a mechanism
-          or exchanging prioritization information. It relies on the
-          application's receiving priority information and each QUIC
-          stream is flow controlled independently. QUIC suggests an
-          implementation SHOULD provide ways for an application to indicate
-          the relative priority of streams. BGP sessions should be created
-          using different priorities. For example, AFI/SAFI that carries
-          routing information SHOUD be given higher priority and generous
-          flow control.</t>
-        <t>An implementation SHOULD support explicit configuration of
-          session priorities.</t>
-      </section>
-      <section title="BGP Timers">
-        <t>BGP timers are defined in section 10 of <xref target="RFC4271"/>.
-        All BGP timers are maintained per session.</t>
-        <t>Each stream session can use different HoldTime and KeepaliveTime.
-          This can be done either through configuration or the value in
-          the OPEN message. If an AFI/SAFI is not carrying critical routing
-          information, slower timer may be used.</t>
 
+      <section title="Session Prioritization">
+        <t>
+          One of the major drawbacks of a single BGP session is that control
+          plane messages for all supported Network Layer protocols use the same
+          connection, which may cause resource contention.
+        </t>
+        <t>
+          QUIC <xref target="RFC9000"/> does not provide a mechanism for
+          exchanging prioritization information and it recommends that
+          implementations provide ways for an application to indicate the
+          relative priority of streams, in this case mapped to BGP sessions.
+          If the functionality is available, an operator should prioritize BGP
+          sessions (streams) that carry critical control plane information.
+          The definition of this functionality and the determination of the
+          importance of a BGP session are both outside the scope of this
+          document.
+        </t>
       </section>
+
       <section title="Other Considerations">
-      <t>A configuration command SHOULD be implemented to enable or
-        disable multisession.</t>
       <t>A configuration command SHOULD be implemented to allow grouping
         of some AFI/SAFIs into one session.</t>
-      <t>Implementations supporting multisession BGP SHOULD have show commands
-        to view the state of each individual session, notifications and
-        logs.</t>
-      <t>It is up to the implementation to decide whether to handle
-        such session in the same process or thread.</t>
       </section>
     </section>
     <section title="Security Considerations">
