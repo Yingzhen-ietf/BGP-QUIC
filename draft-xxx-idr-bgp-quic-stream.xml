@@ -2,9 +2,11 @@
     <!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
         <!ENTITY rfc2119 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml'>
         <!ENTITY rfc4271 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4271.xml'>
+        <!ENTITY rfc4272 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4272.xml'>
         <!ENTITY rfc4486 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4486.xml'>
         <!ENTITY rfc4760 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4760.xml'>
         <!ENTITY rfc5492 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.5492.xml'>
+        <!ENTITY rfc7454 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.7454.xml'>
         <!ENTITY rfc8174 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.8174.xml'>
         <!ENTITY rfc9000 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9000.xml'>
         <!ENTITY I-D.chen-idr-bgp-over-quic PUBLIC ''
@@ -122,7 +124,7 @@
     </t>
     <t>
       Sessions are distinguished by the Network Layer protocol(s) negotiated
-      in the OPEN message.  Multiple Network Layer protocol are negotiated
+      in the OPEN message.  Multiple Network Layer protocols are negotiated
       using the Multiprotocol Extensions capability <xref target="RFC4760"/>.
     </t>
 
@@ -357,7 +359,27 @@
       </section>
     </section>
     <section title="Security Considerations">
-      <t>This document does not change the BGP security model.
+      <t>
+        This document specifies how to establish multiple BGP sessions over a
+        single QUIC connection.  The general operation of BGP is not changed
+        nor is its security model.  The security considerations of
+        <xref target="I-D.chen-idr-bgp-over-quic"/> apply.  Also, the
+        non-TCP-related considerations of <xref target="RFC4271"/>,
+        <xref target="RFC4272"/>, and <xref target="RFC7454"/> are applicable
+        to the specification in this document.
+      </t>
+      <t>
+        By separating the control plane traffic over multiple sessions, the
+        effect of a session-based vulnerability is reduced; only a single
+        session if affected and not the whole connection.  The result is
+        increased resiliency.
+      </t>
+      <t>
+        On the other hand, a high number of BGP sessions may result in higher
+        resource utilization and the risk of depletion.  Also, more sessions
+        may imply additional configuration and operational complexity.  This
+        risk is mitigated by the fact that BGP sessions typically require
+        explicit configuration by the operator.
       </t>
     </section>
 
@@ -409,7 +431,6 @@
         &rfc2119;
         &rfc4271;
         &rfc4486;
-        &rfc4760;
         &rfc5492;
         &rfc8174;
         &rfc9000;
@@ -417,6 +438,9 @@
     </references>
     <references title="Informative References">
         &I-D.ietf-idr-bgp-multisession;
+        &rfc4272;
+        &rfc4760;
+        &rfc7454;
 
     </references>
 
