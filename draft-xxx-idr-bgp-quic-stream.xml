@@ -118,14 +118,8 @@
 	  </t>
     <t>
       Each session operates independently. An error on one session has
-      no impact on any other session.  The BGP modification proposed
-      in the document is limited to the OPEN exchange, mainly
-      connection collision detection.
-    </t>
-    <t>
-      Sessions are distinguished by the Network Layer protocol(s) negotiated
-      in the OPEN message.  Multiple Network Layer protocols are negotiated
-      using the Multiprotocol Extensions capability <xref target="RFC4760"/>.
+      no impact on any other session.  Sessions are distinguished by the
+      Network Layer protocol(s) negotiated in the OPEN message. 
     </t>
 
     <section title="Requirements Language">
