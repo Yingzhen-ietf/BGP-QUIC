@@ -110,7 +110,7 @@
       </t>
     </list></t>
     <t>
-      QUIC <xref target="RFC9000"/> is an UDP-based multiplexed and secure
+      QUIC <xref target="RFC9000"/> is a UDP-based multiplexed and secure
       transport protocol. QUIC can provide low latency and encrypted transport
       with resilient connections.  <xref target="I-D.chen-idr-bgp-over-quic"/>
       specifies the procedure to use BGP over QUIC. Complementary to it, this
@@ -118,7 +118,7 @@
       QUIC streams.
 	  </t>
     <t>
-      Each session operates independently. An error on one session has
+      Each BGP session operates independently. An error on one session has
       no impact on any other session.  Sessions are distinguished by the
       Network Layer protocol(s) negotiated in the BGP OPEN message.
     </t>
