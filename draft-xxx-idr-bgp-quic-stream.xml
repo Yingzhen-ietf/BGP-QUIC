@@ -77,8 +77,8 @@
     <section title="Introduction">
 	  <t>
 	    The Border Gateway Protocol (BGP) <xref target="RFC4271"/> uses TCP as
-	    its transport protocol.  BGP establishes peer relationship between
-      routers using a TCP session on port 179. TCP provides reliable packet
+	    its transport protocol.  BGP establishes peer relationships between
+      routers using a TCP session on port 179. TCP also provides reliable packet
 	    communication.
     </t>
     <t>
@@ -118,9 +118,9 @@
       QUIC streams.
 	  </t>
     <t>
-      Each BGP session operates independently. An error on one session has
-      no impact on any other session.  Sessions are distinguished by the
-      Network Layer protocol(s) negotiated in the BGP OPEN message.
+      Each BGP session operates independently. Thus, an error on one session has
+      no impact on any other session.  The Network Layer protocol(s) negotiated
+      in the BGP OPEN message distinguish the sessions.
     </t>
 
     <section title="Requirements Language">
@@ -135,38 +135,38 @@
 
     <section title="Multiple BGP Sessions">
       <section title="Multiple QUIC Streams">
-        <t>QUIC <xref target="RFC9000"/> is a UDP-based multiplexed and
-          secure transport protocol.
-          It provides connection-oriented and stateful interaction between
-          a client and server. QUIC integrates TLS and allows the exchange
+        <t>QUIC <xref target="RFC9000"/> is a UDP-based
+          secure transport protocol that provides connection-oriented and
+          stateful interaction between
+          a client and server. It integrates TLS and allows the exchange
           of application data as soon as possible.</t>
 
         <t>In QUIC, application protocols exchange information via streams,
           and multiple streams can be multiplexed onto an underlying
           connection. Each stream is a separate unidirectional or
-          bidirectional channel of "order stream of bytes".
-          Each stream has flow control which limits bytes sent on a
+          bidirectional channel of "order stream of bytes."
+          Moreover, each stream has flow control which limits bytes sent on a
           stream, together with flow control of the connection.</t>
       </section>
       <section title="Multiple BGP Sessions Using QUIC Streams">
         <t>
           BGP over QUIC <xref target="I-D.chen-idr-bgp-over-quic"/> proposes
           different options to map streams.  This document specifies a
-          complementary and backwards compatible mechanism to establish
+          complementary and backward compatible mechanism to establish
           multiple BGP sessions using QUIC streams.  An implementation can
           assign one or more Network Layer protocols to a BGP session.
         </t>
         <t>A QUIC stream is created by sending a BGP OPEN message, and
           each stream MUST be bidirectional as described in Section 2.1
-          of <xref target="RFC9000"/>.  When a BGP session is terminated, the
-          corresponding stream MUST end (clean termination) as described in
-          Section 2.4 of <xref target="RFC9000"/>.
+          of <xref target="RFC9000"/>.  In addition, the corresponding stream
+          MUST end (clean termination) as described in Section 2.4 of
+          <xref target="RFC9000"/> when a BGP session is terminated.
         </t>
         <t>
-          The Connection Collision Detection procedure to be used with streams
-          is described in <xref target="connection"/>.  Each BGP session
+          <xref target="connection"/> describes the Connection Collision
+          Detection procedure to be used with streams.  Each BGP session
           operates independently, which means critical conditions (such
-          as malformed message) in one session won't affect others.
+          as a malformed message) in one session won't affect others.
         </t>
       </section>
     </section>
@@ -194,14 +194,14 @@
         <t>Flags: bitfield - MUST be set to zero and ignored by the receiver.
         </t>
         <t>
-          The MSC applies only when BGP over QUIC
-          <xref target="I-D.chen-idr-bgp-over-quic"/> is used.  It MUST be
+          The MSC only applies when using BGP over QUIC
+          <xref target="I-D.chen-idr-bgp-over-quic"/>.  It MUST be
           included in all OPEN messages.  It MUST be ignored otherwise.
         </t>
         <t>
-          The specification in this document is used only if both peers
-          advertise the MSC during the establishment of the "initial session".
-          Otherwise the processes specified in
+          This specification applies only if both peers advertise the MSC
+          during the establishment of the "initial session."
+          Otherwise, the processes specified in
           <xref target="I-D.chen-idr-bgp-over-quic"/> MUST be followed.  In
           particular, if a peer that advertises the MSC doesn't receive an OPEN
           message with the MSC from its peer, it SHOULD NOT terminate the
@@ -209,12 +209,13 @@
         </t>
         <t>
           Using the MSC allows peers to establish multiple BGP sessions, one
-          per QUIC stream.  Each new BGP session is established using its own
+          per QUIC stream.  Each new BGP session is established using a separate
           OPEN message <xref target="RFC4271"/> and MUST include the MSC.  If
-          the MSC was exchanged by both peers in the "initial session" but is
-          not present when establishing a new session, the session is
-          terminated and the Error Subcode MUST be set to MultiStream
-          Conflict (TBD2), defined in <xref target="notifications"/>.
+          both peers exchange the MSC in the "initial session," they MUST
+          include it when establishing other sessions.  Otherwise, the new
+          session MUST be terminated, and the Error Subcode MUST be set to
+          MultiStream Conflict (TBD2), defined in
+          <xref target="notifications"/>.
         </t>
         <t>
           Once a BGP session is established, it follows the procedures
@@ -228,13 +229,14 @@
         OPEN Message Error subcodes:
       <list style="empty">
         <t>
-          TBD2 - MultiSession Conflict - Used if the MSC was exchanged by both peers in the "initial session" but is not present when establishing
+          TBD2 - MultiSession Conflict - Used if the MSC is exchanged by both
+          peers in the "initial session" but is not present when establishing
           a new session.
         </t>
         <t>
           TBD3 - Session Capability Mismatch -  Used if a BGP speaker
           terminates a session in the case where it sends an OPEN message with
-          the MSC, but receives an OPEN message without it.
+          the MSC but receives an OPEN message without it.
         </t>
         <t>
           TBD4 - Network Layer Protocol Mismatch - Used if a BGP session has
@@ -265,14 +267,14 @@
          <t>
          If a pair of BGP speakers try to establish a BGP session with each
          other simultaneously, then two parallel sessions will be formed. In
-         the case of BGP over QUIC, the IP addressees of the connection cannot
+         the case of BGP over QUIC, the IP addresses of the connection cannot
          be used to resolve collisions when using multiple streams.
          </t>
          <t>
-         For the purpose of avoiding connection collision, a session is
+         To avoid connection collisions, a session is
          identified by the My Autonomous System and BGP Identifier fields pair
-         in the OPEN message.  In this context, connection collision is
-         described as the attempt to open a BGP session for which the set of
+         in the OPEN message.  In this context, a connection collision is
+         the attempt to open a BGP session for which the set of
          Network Layer protocols is the same.  One of the connections MUST be
          closed.
          </t>
@@ -284,10 +286,10 @@
          ASN is preserved <xref target="RFC6286"/>.
          </t>
          <t>
-         Upon receipt of an OPEN message, the local system MUST examine all of
-         its sessions that are in the OpenConfirm state.  A BGP speaker MAY
+         Upon receiving an OPEN message, the local system MUST examine all of
+         its sessions in the OpenConfirm state. A BGP speaker MAY
          also examine sessions in an OpenSent state if it knows the BGP
-         Identifier of the peer by means outside of the protocol.  If, among
+         Identifier of the peer by means outside of the protocol.  If among
          these sessions, there is one to a remote BGP speaker whose BGP
          Identifier and ASN pair equals the one in the OPEN message, and this
          session collides with the connection over which the OPEN message is
@@ -305,13 +307,13 @@
             2) If the value of the local BGP Identifier is less than the
                remote one, the local system closes the BGP connection that
                already exists (the one that is already in the OpenConfirm
-               state), and accepts the BGP connection initiated by the remote
+               state) and accepts the BGP connection initiated by the remote
                system.
                </t>
                <t>
             2a) Otherwise, the local system closes the newly created BGP
-               connection (the one associated with the newly received OPEN
-               message), and continues to use the existing one (the one that
+               connection (the one associated with the recently received OPEN
+               message) and continues to use the existing one (the one that
                is already in the OpenConfirm state).
                </t>
                <t>
@@ -322,7 +324,7 @@
             </list></t>
          <t>
          Unless allowed via configuration, a connection collision with an
-         existing BGP session that is in the Established state causes
+         existing BGP session in the Established state causes the
          closing of the newly created session.
          </t>
          <t>
@@ -346,8 +348,8 @@
     <section title="Operational Considerations">
       <section title="Backward Compatibility">
         <t>
-          A BGP Speaker that doesn't understand the MSC will simply ignore it
-          <xref target="RFC5492"/> .  <xref target="MSC"/> recommends not
+          A BGP speaker that doesn't understand the MSC will ignore it
+          <xref target="RFC5492"/>.  <xref target="MSC"/> recommends not
           terminating a session when only one peer supports the MSC.  Instead,
           the operation will continue as specified in
           <xref target="I-D.chen-idr-bgp-over-quic"/>.
@@ -356,17 +358,17 @@
 
       <section title="Session Prioritization">
         <t>
-          One of the major drawbacks of a single BGP session is that control
+          One of the drawbacks of a single BGP session is that control
           plane messages for all supported Network Layer protocols use the same
           connection, which may cause resource contention.
         </t>
         <t>
           QUIC <xref target="RFC9000"/> does not provide a mechanism for
-          exchanging prioritization information and it recommends that
+          exchanging prioritization information. Instead, it recommends that
           implementations provide ways for an application to indicate the
-          relative priority of streams, in this case mapped to BGP sessions.
-          If the functionality is available, an operator should prioritize BGP
-          sessions (streams) that carry critical control plane information.
+          relative priority of streams, in this case, mapped to BGP sessions.
+          An operator should prioritize BGP sessions (streams) that carry
+          critical control plane information if the functionality is available.
           The definition of this functionality and the determination of the
           importance of a BGP session are both outside the scope of this
           document.
@@ -381,25 +383,25 @@
     <section title="Security Considerations">
       <t>
         This document specifies how to establish multiple BGP sessions over a
-        single QUIC connection.  The general operation of BGP is not changed
+        single QUIC connection.  The general operation of BGP is not changed,
         nor is its security model.  The security considerations of
         <xref target="I-D.chen-idr-bgp-over-quic"/> apply.  Also, the
         non-TCP-related considerations of <xref target="RFC4271"/>,
-        <xref target="RFC4272"/>, and <xref target="RFC7454"/> are applicable
+        <xref target="RFC4272"/>, and <xref target="RFC7454"/> apply
         to the specification in this document.
       </t>
       <t>
         By separating the control plane traffic over multiple sessions, the
         effect of a session-based vulnerability is reduced; only a single
-        session if affected and not the whole connection.  The result is
+        session is affected and not the whole connection.  The result is
         increased resiliency.
       </t>
       <t>
         On the other hand, a high number of BGP sessions may result in higher
         resource utilization and the risk of depletion.  Also, more sessions
-        may imply additional configuration and operational complexity.  This
-        risk is mitigated by the fact that BGP sessions typically require
-        explicit configuration by the operator.
+        may imply additional configuration and operational complexity.
+        However, this risk is mitigated by the fact that BGP sessions typically
+        require explicit configuration by the operator.
       </t>
     </section>
 
@@ -462,7 +464,6 @@
         &rfc4272;
         &rfc4760;
         &rfc7454;
-
     </references>
 
 </back>
