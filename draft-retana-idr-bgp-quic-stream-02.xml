@@ -23,7 +23,7 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <?rfc strict="yes" ?>
-<rfc category="std" docName="draft-retana-idr-bgp-quic-stream-01">
+<rfc category="std" docName="draft-retana-idr-bgp-quic-stream-02">
   <!-- ***** FRONT MATTER ***** -->
   <front>
     <title abbrev="BGP QUIC Streams">Use of Streams in BGP over QUIC</title>
@@ -354,8 +354,16 @@
 
     <section title="Modifications to FSM">
       <t>
-        [To be completed.]
+        The modifications to BGP FSM is described in section 4.4 of 
+        <xref target="I-D.chen-idr-bgp-over-quic"/>. For simplicity
+        and security reason, it is suggested that 1-RTT is used.
       </t>
+      <t>
+        This specification does not modify BGP FSM, but the collision
+        handling procedure should be replaced with the procedure described
+        in this document.
+      </t>
+
     </section>
 
     <section title="Operational Considerations">
@@ -386,6 +394,13 @@
           importance of a BGP session are both outside the scope of this
           document.
         </t>
+        <t>An example implementation is to have four priority (0-3) defined,
+          and smaller number means higher priority. Each AFI/SAFI should be
+          assigned a default priority and optional configuration to modify
+          the default value. For example, IPv4 and IPv6 unicast AFI/SAFI 
+          (1/1 and 2/1) may have priority of 1, while BGP-LS (16388/71 and
+          16388/72) may have a priority of 3, and BGP FlowSpec (1/133 and
+          1/134) may have a priority of 4.</t>
       </section>
 
       <section title="Other Considerations">
@@ -422,7 +437,7 @@
 
       <t>
         IANA is asked to assign a new Capability Code for the MultiStream
-        Capablity (<xref target="MSC"/>) as follows:
+        Capability (<xref target="MSC"/>) as follows:
       </t>
         <texttable title="MultiStream Capability">
           <ttcol>Value</ttcol>
@@ -436,7 +451,7 @@
         </texttable>
       <t>
         IANA is asked to assign three values from the OPEN Message Error
-        subcodes registrty as follows:
+        subcodes registry as follows:
       </t>
       <texttable>
         <ttcol>Value</ttcol>
