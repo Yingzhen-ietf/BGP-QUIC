@@ -23,7 +23,7 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <?rfc strict="yes" ?>
-<rfc category="std" docName="draft-retana-idr-bgp-quic-stream-02">
+<rfc category="std" ipr="trust200902" docName="draft-retana-idr-bgp-quic-stream-02">
   <!-- ***** FRONT MATTER ***** -->
   <front>
     <title abbrev="BGP QUIC Streams">Use of Streams in BGP over QUIC</title>
