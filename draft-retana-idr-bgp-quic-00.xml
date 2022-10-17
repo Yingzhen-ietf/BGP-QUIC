@@ -7,15 +7,16 @@
         <!ENTITY rfc4760 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4760.xml'>
         <!ENTITY rfc5492 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.5492.xml'>
         <!ENTITY rfc6286 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.6286.xml'>
+        <!ENTITY rfc7301 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.7301.xml'>
         <!ENTITY rfc7454 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.7454.xml'>
-        <!ENTITY rfc7475 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.7475.xml'>
         <!ENTITY rfc8174 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.8174.xml'>
         <!ENTITY rfc8446 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.8446.xml'>
         <!ENTITY rfc9000 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9000.xml'>
         <!ENTITY rfc9001 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9001.xml'>
         <!ENTITY rfc9002 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9002.xml'>
-        <!ENTITY I-D.ietf-idr-bgp-multisession PUBLIC ''
-      'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-idr-bgp-multisession-07.xml'>
+        <!ENTITY I-D.ietf-idr-bgp-multisession PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-idr-bgp-multisession-07.xml'>
+        <!ENTITY I-D.chen-idr-bgp-over-quic PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-chen-idr-bgp-over-quic-00.xml'>
+        <!ENTITY I-D.retana-idr-bgp-quic-stream PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-retana-idr-bgp-quic-stream-02.xml'>
         ]>
 <?rfc toc="yes"?>
 <?rfc tocompact="no"?>
@@ -76,14 +77,14 @@
     <section title="Introduction">
 	  <t>
 	    The Border Gateway Protocol (BGP) <xref target="RFC4271"/> is the
-      routing protocol to exchange routing and reachability information
+      routing protocol used to exchange routing and reachability information
       among autonomous systems, and it uses TCP as its transport
       protocol to provide reliable packet communication.  BGP establishes
       peer relationships between routers using a TCP session on port
       179.
     </t>
     <t>
-      Multiprotocol Extensions for BGP-4 (MP-BGP) <xref target="RFC4760"/>
+      The Multiprotocol Extensions for BGP-4 (MP-BGP) <xref target="RFC4760"/>
       allow BGP to carry information for multiple Network Layer protocols.
       However, only a single TCP connection can reach the Established state
       between a pair of peers <xref target="RFC4271"/>.
@@ -98,7 +99,7 @@
 
      <t>
       This document specifies the procedures for BGP to use QUIC as
-      the transport protocol. 
+      a transport protocol.
 	  </t>
 
     <section title="Requirements Language">
@@ -120,18 +121,16 @@
 
       <t>BoQ: BGP over QUIC, i.e., BGP using QUIC as the transport layer.</t>
 
-      <t>ALPN: Application-Layer Protocol Negotiation</t>
-
       <t/>
     </section>
 
     <section title="Key Advantages and Design Consideration">
-      <t>To use QUIC as the transport protocol for BGP, the following
+      <t>To use QUIC as a transport protocol for BGP, the following
         design requirements should be considered.</t>
 
       <section title="BGP Specification Compatibility">
-        <t>BoQ replaces only the transport layer of BGP over TCP, and this means
-        that the BGP protocol specification remains backward compatible.</t>
+        <t>BoQ replaces only the transport layer of BGP over TCP.
+          The BGP protocol specification remains backward compatible.</t>
 
         <t>During the establishment of a BGP session, the BGP finite
           state machine needs to receive transport-layer events. In BoQ,
@@ -169,13 +168,12 @@
         time. QUIC strictly ensures a transmission sequence of data of the
         same stream, but does not guarantee a transmission sequence of data of
         different streams. QUIC also supports stream-level flow control.</t>
-        <t>BGP can make use of the steam multiplexing to solve the head-of-line
-          issues. MP-BGP <xref target="RFC4760"/> supports multiple address
-          families, with one TCP connection these different services are
-          competing control plane resource. BoQ can have multiple BGP
-          sessions within one QUIC connection. There are different ways
-          to map QUIC streams, and an address family based solution is
-          described in detail in <xref target="MBS"/>.</t>
+        <t>MP-BGP <xref target="RFC4760"/> supports multiple address
+          families, with one TCP connection these different services
+          compete for control plane resources. BoQ can have multiple BGP
+          sessions (streams) within one QUIC connection. There are different
+          ways to map QUIC streams, and an address family based solution is
+          specified in detail in <xref target="MBS"/>.</t>
       </section>
 
     </section>
@@ -196,11 +194,27 @@
         If the BGP peers reach the Established state, the BGP session has
         been established.</t>
       </list></t>
-        
+
       <t><xref target="RFC4271"/> defines BGP FSM operation, connection
-      conflict detection and resolution for BGP over TCP. BGP 
+      conflict detection and resolution for BGP over TCP. BGP
       over QUIC follows the same definitions except the explicit
       modifications defined in this document.</t>
+
+      <section anchor="BoQConn" title="BoQ Connection Establishment">
+       <t>
+       BoQ uses QUIC version 1 as the underlying transport.  The use
+       of other QUIC transport versions with MAY be defined by future
+       specifications.</t>
+       <t>
+       QUIC connections are established as described in
+       <xref target="RFC9000"/>.  During connection establishment, a BGP
+       speaker SHOULD use UDP port 179 and MUST select the Application-Layer
+       Protocol Negotiation (ALPN; see <xref target="RFC7301"/>) token "bgp4"
+       in the TLS handshake.  Support for other application-layer protocols
+       MUST NOT be offered in the same handshake.  A connection MUST be closed
+       if the ALPN token is not as indicated, or if other application-layer
+       protocols are offered in the same handshake.</t>
+       </section>
 
       <section title="Session Attributes">
         <t>TCP-related session attributes should be replaced with the
@@ -439,7 +453,7 @@
           included in all OPEN messages.  It MUST be ignored otherwise.
         </t>
         <t>
-          BGP multiple session support defined in <xref target="MBS"/> 
+          BGP multiple session support defined in <xref target="MBS"/>
           applies only if both peers advertise the MSC
           during the establishment of the "initial session." In
           particular, if a peer that advertises the MSC doesn't receive an OPEN
@@ -670,11 +684,25 @@
 
 
     <section title="Operational Considerations">
+      <section title="Using BoQ">
+      <t>
+      The decision to use BoQ instead of the TCP-based mechanism defined in
+      <xref target="RFC4271"/> is an operational decision and out of the scope
+      of this document.  An implementation MUST provide a configuration
+      mechanism to enable BoQ on a per-peer basis.  More granularity (per
+      Network Layer protocol, for example) is not recommended as it may
+      increase the operational complexity.</t>
+      <t>
+      Connectivity problems (e.g., blocking UDP) can result in a failure to
+      establish a QUIC connection; BGP speakers SHOULD attempt to establish a
+      TCP-based BGP session in this case.</t>
+    </section>
+
       <section title="BGP Multi Session Backward Compatibility">
         <t>
           A BGP speaker that doesn't understand the MSC will ignore it
           <xref target="RFC5492"/>.  <xref target="MSC"/> recommends not
-          terminating a session when only one peer supports the MSC.  
+          terminating a session when only one peer supports the MSC.
         </t>
       </section>
 
@@ -698,7 +726,7 @@
         <t>An example implementation is to have four priority (0-3) defined,
           and smaller number means higher priority. Each AFI/SAFI should be
           assigned a default priority and optional configuration to modify
-          the default value. For example, IPv4 and IPv6 unicast AFI/SAFI 
+          the default value. For example, IPv4 and IPv6 unicast AFI/SAFI
           (1/1 and 2/1) may have priority of 1, while BGP-LS (16388/71 and
           16388/72) may have a priority of 3, and BGP FlowSpec (1/133 and
           1/134) may have a priority of 4.</t>
@@ -717,8 +745,8 @@
         <xref target="RFC4272"/>, and <xref target="RFC7454"/> apply
         to the specification in this document.</t>
 
-      <t>BoQ enhances transport-layer security for BGP sessions, refer to<xref
-      target="RFC7475"/> :</t>
+      <t>BoQ enhances transport-layer security for BGP sessions, refer to <xref
+      target="RFC7454"/> :</t>
 
       <t>(1) Supports server identity authentication.</t>
 
@@ -729,6 +757,12 @@
 
       <t>(4) Supports integrity protection for BGP messages.</t>
 
+      <t>
+       The use of a specific UDP port number and an ALPN token <xref target="BoQConn"/> protects a BGP
+       Speaker from attempts to establish an unexpected BGP session.
+       Additionally, all packets directed to UDP port 179 on the local device
+       and sourced from an address not known or permitted to become a BGP
+       neighbor SHOULD be discarded. </t>
       <t>
         With BGP multi session support using QUIC streams, it separates
         the control plane traffic over multiple sessions, the
@@ -747,6 +781,28 @@
 
     <section anchor="IANA" title="IANA Considerations">
 
+     <section title="UDP Port for BoQ">
+     <t>
+      IANA is requested to add a reference to [this document] for the UDP
+      port 179 entry in the "Service Name and Transport Protocol Port Number Registry".</t>
+    </section>
+
+     <section title="Registration of the BGP4 Identification String">
+      <t>
+       This document creates a new registration for the identification of
+       BGP [RFC4271] in the "TLS Application-Layer Protocol Negotiation (ALPN)
+       Protocol IDs" registry.</t>
+      <t>
+       The "bgp4" string identifies BGP-4 [RFC4271]:</t>
+      <t>
+       Protocol:  BGP-4</t>
+      <t>
+       Identification Sequence:  0x62 0x67 0x70 0x34 ("bgp4")</t>
+      <t>
+       Specification:  This document</t>
+    </section>
+
+     <section title="Multiple Streams">
       <t>
         IANA is asked to assign a new Capability Code for the MultiStream
         Capability (<xref target="MSC"/>) as follows:
@@ -761,6 +817,9 @@
           <c>[This Document]</c>
           <c>IETF</c>
         </texttable>
+      </section>
+
+      <section title="Error Codes">
       <t>
         IANA is asked to assign three values from the OPEN Message Error
         subcodes registry as follows:
@@ -785,9 +844,17 @@
         <c>BOQ_INTERNAL_ERROR</c> <c>Stream Internal Error</c> <c>[This Document]</c>
       </texttable>
     </section>
+    </section>
 
     <section title="Acknowledgement">
-      <t>This document references the text and procedures defined in
+      <t>
+        This document merges and replaces
+        <xref target="I-D.chen-idr-bgp-over-quic"/> and
+        <xref target="I-D.retana-idr-bgp-quic-stream"/>.  The authors
+        acknowledge the contributions made by the authors and contributors of
+        those documents.</t>
+      <t>
+        This document references the text and procedures defined in
         <xref target="I-D.ietf-idr-bgp-multisession"/>, and we are grateful
         for their contributions.</t>
       <t>
@@ -806,15 +873,17 @@
         &rfc4486;
         &rfc5492;
         &rfc6286;
+        &rfc7301;
         &rfc8174;
         &rfc9000;
     </references>
     <references title="Informative References">
         &I-D.ietf-idr-bgp-multisession;
+        &I-D.chen-idr-bgp-over-quic;
+        &I-D.retana-idr-bgp-quic-stream;
         &rfc4272;
         &rfc4760;
         &rfc7454;
-        &rfc7475;
         &rfc8446;
         &rfc9001;
         &rfc9002;
