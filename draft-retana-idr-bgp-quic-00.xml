@@ -214,6 +214,10 @@
        MUST NOT be offered in the same handshake.  A connection MUST be closed
        if the ALPN token is not as indicated, or if other application-layer
        protocols are offered in the same handshake.</t>
+       <t>
+        BGP Speakers exchange messages using one of more QUIC streams
+        (<xref target="MBS"/>).  The message format and framing is unchanged
+        [RFC4271].</t>
        </section>
 
       <section title="Session Attributes">
