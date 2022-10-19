@@ -220,27 +220,42 @@
         [RFC4271].</t>
        </section>
 
-      <section title="Session Attributes">
-        <t>TCP-related session attributes should be replaced with the
-          corresponding QUIC session attributes. The session attributes
-          specific to BoQ FSM are defined as follows:</t>
+      <section title="Optional Session Attributes">
+        <t>This document adds two optional Session attributes to the list in
+          Section 8 of <xref target="RFC4271"/>:</t>
+          <dl spacing="compact">
+            <dt>14)</dt><dd> PassiveQUICEstablishment</dd>
+            <dt>15)</dt><dd> TrackQUICState</dd>
+          </dl>
+          <t>Section 8.1.1 of <xref target="RFC4271"/> describes the linkage
+          between the FSM functionality, events, and optional session
+          attributes.  When using BoQ, Group 3 (TCP processing) is replaced
+          with:</t>
+          <t indent="3">
+          Group 3: QUIC processing</t>
+          <ul empty="true" indent="6">
+             <li>Optional Session Attributes: PassiveQUICEstablishment,
+                                          TrackQUICState</li>
 
-          <t>(1) Optional Session Attributes: PassiveQuicEstablishment</t>
+             <li>Option 1:    PassiveQUICEstablishment</li>
 
-          <t>Description: This option indicates that the BGP FSM will
-          passively wait for the remote BGP peer to establish the BGP QUIC
-          connection.</t>
+             <li>Description: This option indicates that the BGP FSM will
+                          passively wait for the remote BGP peer to
+                          establish the BGP QUIC connection.  The local
+                          node is a QUIC server <xref target="RFC9000"/>.</li>
 
-          <t>Value: TRUE or FALSE</t>
+             <li>Value:       TRUE or FALSE</li>
 
-          <t>(2) Optional Session Attributes: TrackQuicState</t>
+             <li>Option 2:    TrackQUICState</li>
 
-          <t>Description: The BGP FSM normally tracks the end result of a QUIC
-          connection attempt rather than individual QUIC messages. Optionally,
-          the BGP FSM can support additional interaction with the QUIC
-          connection negotiation.</t>
+             <li>Description: The BGP FSM tracks the end result of a QUIC
+                          connection attempt rather than individual QUIC
+                          messages.  Optionally, the BGP FSM can support
+                          additional interaction with the TCP connection
+                          negotiation.</li>
 
-          <t>Value: TRUE or FALSE</t>
+             <li>Value:       TRUE or FALSE</li>
+           </ul>
       </section>
 
       <section title="FSM Event">
