@@ -178,7 +178,7 @@
 
     </section>
 
-    <section anchor="FSM" title="BGP Finite State Machine (FSM)">
+    <section anchor="BoQ" title="BGP over QUIC (BoQ)">
       <t>Before two BGP speakers starting exchanging routing information,
         they need to establish a BGP session. A BGP session can be
         established in two phases:
@@ -215,10 +215,301 @@
        if the ALPN token is not as indicated, or if other application-layer
        protocols are offered in the same handshake.</t>
        <t>
-        BGP Speakers exchange messages using one of more QUIC streams
+        After a QUIC connection is established, the first message sent by each
+        endpoint is an OPEN message, which is used to indicate whether the
+        connection uses one of more QUIC streams to exchange BGP messages
         (<xref target="MBS"/>).  The message format and framing is unchanged
         [RFC4271].</t>
        </section>
+
+       <section anchor="MBS" title="Multiple BGP Sessions">
+
+           <t>In QUIC, application protocols exchange information via streams,
+             and multiple streams can be multiplexed onto an underlying
+             connection. Each stream is a separate unidirectional or
+             bidirectional channel of "order stream of bytes."
+             Moreover, each stream has flow control which limits bytes sent on a
+             stream, together with flow control of the connection.</t>
+         <section title="Multiple BGP Sessions Using QUIC Streams">
+           <t>
+             There are different options to map streams. This document specifies a
+             complementary and backward compatible mechanism to establish
+             multiple BGP sessions using QUIC streams.  An implementation can
+             assign one or more Network Layer protocols to a BGP session.
+           </t>
+           <t>A QUIC stream is created by sending a BGP OPEN message, and
+             each stream MUST be bidirectional as described in Section 2.1
+             of <xref target="RFC9000"/>.  In addition, the corresponding stream
+             MUST end (clean termination) as described in Section 2.4 of
+             <xref target="RFC9000"/> when a BGP session is terminated.
+           </t>
+           <t>
+             <xref target="connection"/> describes the Connection Collision
+             Detection procedure to be used with streams.  Each BGP session
+             operates independently, which means critical conditions (such
+             as a malformed message) in one session won't affect others.
+           </t>
+         </section>
+         <section anchor="MSC" title="MultiStream Capability">
+         <t>
+          The MultiStream Capability (MSC) is defined to indicate that a BGP
+          speaker supports multiple sessions as specified in this document.
+          The capability <xref target="RFC5492"/> is defined as follows:
+
+           <list style="empty">
+             <t>Capability code (1 octet): TBD1</t>
+             <t>Capability length (1 octet): 1</t>
+             <t>Capability value (1 octet): flag field reserved.</t>
+           </list></t>
+           <figure title="" suppress-title="false" align="left" alt="" width="" height="">
+           <artwork xml:space="preserve" name="" type="" align="left" alt="" width="" height="">
+      0 1 2 3 4 5 6 7
+     +-+-+-+-+-+-+-+-+
+     |   Reserved    |
+     +-+-+-+-+-+-+-+-+
+
+           </artwork>
+           </figure>
+           <t>Flags: bitfield - MUST be set to zero and ignored by the receiver.
+           </t>
+           <t>
+             The MSC only applies when using BGP over QUIC. It MUST be
+             included in all OPEN messages.  It MUST be ignored otherwise.
+           </t>
+           <t>
+             BGP multiple session support defined in <xref target="MBS"/>
+             applies only if both peers advertise the MSC
+             during the establishment of the "initial session." In
+             particular, if a peer that advertises the MSC doesn't receive an OPEN
+             message with the MSC from its peer, it SHOULD NOT terminate the
+             session.
+           </t>
+           <t>
+             Using the MSC allows peers to establish multiple BGP sessions, one
+             per QUIC stream.  Each new BGP session is established using a separate
+             OPEN message <xref target="RFC4271"/> and MUST include the MSC.  If
+             both peers exchange the MSC in the "initial session," they MUST
+             include it when establishing other sessions.  Otherwise, the new
+             session MUST be terminated, and the Error Subcode MUST be set to
+             MultiStream Conflict (TBD2), defined in
+             <xref target="notifications"/>.
+           </t>
+           <t>
+             Once a BGP session is established, it follows the procedures
+             specified in <xref target="RFC4271"/>.</t>
+         </section>
+         <section title="Modifications to FSM">
+         <t>
+           The modifications to BGP FSM is described in <xref target="FSM"/>.
+           For simplicity and security reason, it is suggested that 1-RTT
+           is used.
+         </t>
+         <t>
+           BGP multi-session support doesn't modify BGP FSM, but the collision
+           handling procedure should be replaced with the procedure described
+           below.
+         </t>
+         </section>
+         <section anchor="connection" title="BGP Session Establishment and Collision Avoidance">
+
+            <t>
+            Before creating a new session, a BGP speaker should check that no
+            session exists for the same Network Layer protocol(s).  If a session
+            already exists, the BGP speaker SHOULD NOT attempt to create a new one.
+            </t>
+            <t>
+            If a pair of BGP speakers try to establish a BGP session with each
+            other simultaneously, then two parallel sessions will be formed. In
+            the case of BGP over QUIC, the IP addresses of the connection cannot
+            be used to resolve collisions when using multiple streams.
+            </t>
+            <t>
+            To avoid connection collisions, a session is
+            identified by the My Autonomous System and BGP Identifier fields pair
+            in the OPEN message.  In this context, a connection collision is
+            the attempt to open a BGP session for which the set of
+            Network Layer protocols is the same.  One of the connections MUST be
+            closed.
+            </t>
+            <t>
+            The connection collision is resolved using the extension specified in
+            <xref target="RFC6286"/>.  In other words, the session with the
+            higher-valued BGP Identifier is preserved <xref target="RFC4271"/>.
+            If the BGP Identifiers are identical, then the session with the larger
+            ASN is preserved <xref target="RFC6286"/>.
+            </t>
+            <t>
+            Upon receiving an OPEN message, the local system MUST examine all of
+            its sessions in the OpenConfirm state. A BGP speaker MAY
+            also examine sessions in an OpenSent state if it knows the BGP
+            Identifier of the peer by means outside of the protocol.  If among
+            these sessions, there is one to a remote BGP speaker whose BGP
+            Identifier and ASN pair equals the one in the OPEN message, and this
+            session collides with the connection over which the OPEN message is
+            received, then the local system performs the following collision
+            resolution procedure:
+            <list style="empty">
+            <t>
+               1) The BGP Identifier of the local system is compared to the BGP
+                  Identifier of the remote system (as specified in the OPEN
+                  message).  Comparing BGP Identifiers is done by converting them
+                  to host byte order and treating them as 4-octet unsigned
+                  integers.
+                  </t>
+                  <t>
+               2) If the value of the local BGP Identifier is less than the
+                  remote one, the local system closes the BGP connection that
+                  already exists (the one that is already in the OpenConfirm
+                  state) and accepts the BGP connection initiated by the remote
+                  system.
+                  </t>
+                  <t>
+               2a) Otherwise, the local system closes the newly created BGP
+                  connection (the one associated with the recently received OPEN
+                  message) and continues to use the existing one (the one that
+                  is already in the OpenConfirm state).
+                  </t>
+                  <t>
+               3) If the BGP Identifiers of the peers involved in the connection
+                  collision are identical, then the session initiated by the BGP
+                  speaker with the larger AS number is preserved.
+                  </t>
+               </list></t>
+            <t>
+            Unless allowed via configuration, a connection collision with an
+            existing BGP session in the Established state causes the
+            closing of the newly created session.
+            </t>
+            <t>
+            Closing the BGP session (that results from the collision resolution
+            procedure) is accomplished by sending the NOTIFICATION message with
+            the Error Code Cease, Subcode Connection Collision Resolution (7)
+            <xref target="RFC4486"/>.
+            </t>
+            <t>
+            The remainder of the process is as specified in
+            <xref target="RFC4271"/>.
+            </t>
+         </section>
+       </section>
+     </section>
+
+
+         <section anchor="notifications" title="Error Handling">
+           <t>BGP over Quic error handling involves the
+               following three types of errors:</t>
+
+               <t>(1) QUIC error: Includes stream error and connection error <xref
+               target="RFC9001"/>. In some cases, a stream error may cause a
+               connection error. For example, if an operation error occurs on all
+               streams, the connection error should be triggered to close the
+               connection.</t>
+
+               <t>(2) TLS alert: In <xref target="RFC9001"/>,a QUIC endpoint MUST
+               treat any alert from TLS as if it were at the "fatal" level. For TLS
+               alerts, this includes replacing any alert with a generic alert, such
+               as handshake_failure (0x128 in QUIC).</t>
+
+               <t>(3) BGP error: If an error occurs in BGP processing <xref
+               target="RFC4271"/>, it can be mapped to the following BoQ Error
+               Codes<xref target="RFC9000"/>.</t>
+
+               <t>This document defines some of the following BoQ Error Codes:</t>
+
+               <t>(1) BOQ_NO_ERROR (0x00): No error. This is used when the
+               connection or stream needs to be closed, but there is no error to
+               signal.</t>
+
+               <t>(2) BOQ_INTERNAL_ERROR (0x01): The BoQ implementation encountered
+               an internal error and is incapable of continuing the stream or the
+               connection.</t>
+
+           <section title="Error Handling with MultiSteam Support">
+           <t>
+             OPEN message error handling is defined in section 6.2 of
+             <xref target="RFC4271"/>. This document introduces the following
+             OPEN Message Error subcodes:
+           <list style="empty">
+             <t>
+               TBD2 - MultiSession Conflict - Used if the MSC is exchanged by both
+               peers in the "initial session" but is not present when establishing
+               a new session.
+             </t>
+             <t>
+               TBD3 - Session Capability Mismatch -  Used if a BGP speaker
+               terminates a session in the case where it sends an OPEN message with
+               the MSC but receives an OPEN message without it.
+             </t>
+             <t>
+               TBD4 - Network Layer Protocol Mismatch - Used if a BGP session has
+               already been established for a signaled Network Layer Protocol,
+               either individually or as part of a set.
+             </t>
+           </list></t>
+           <t>
+             <xref target="MSC"/> recommends not terminating a session when only one
+             peer supports the MSC.  If such a BGP speaker does terminate the
+             session, the Error Subcode MUST be set to Session Capability Mismatch
+             (TBD3).
+           </t>
+           <t>
+             Any individual BGP session can be terminated as specified in
+             <xref target="RFC4486"/>.  If multiple sessions are to be terminated,
+             then the procedure MUST be followed for each one.
+           </t>
+           </section>
+           <section title="Session closure">
+               <t>QUIC provides three ways to close a connection(<xref
+               target="RFC9000"> see </xref> Section 10):</t>
+
+               <t>(1) Idle timeout</t>
+
+               <t>(2) Immediate Close</t>
+
+               <t>(3) Stateless Reset</t>
+
+               <t>When the idle timer expires, the connection is closed
+               immediately. Idle timeout can be calculated using the following
+               formula:</t>
+
+               <t>idle_timeout=MAX(min_idle_timeout, 3*PTO)</t>
+
+               <t>The PTO is a time that the sender should wait for an
+               acknowledgment of a sent packet. For a calculation method, refer to
+               <xref target="RFC9002"/> Section 6.2.1.</t>
+
+               <t>When establishing a QUIC connection, the transmission parameter
+               max_idle_timeout is used. Endpoints advertise local idle_timeout to
+               each other. If no max_idle_timeout advertisement is received from
+               the remote end, the remote idle_timeout is set to a value of 0.
+               Based on the values of local idle_timeout and remote idle_timeout,
+               there are three possible scenarios:</t>
+
+               <t>(1) If both the values are 0, disable the idle timeout
+               function.</t>
+
+               <t>(2) If there is only one value 0, set min_idle_timeout to a
+               non-zero value in between.</t>
+
+               <t>(3) If neither value is 0, set min_idle_timeout to the smaller
+               value.</t>
+
+               <t>Two options are available for the idle timer during BGP session
+               establishment. Option 1 is recommended by default.</t>
+
+               <t>Option 1: Set this parameter to 0, indicating that idle timeout
+               is disabled.</t>
+
+               <t>Option 2: The value must be greater than the value of BGP
+               HoldTimer. It is recommended that the value be greater than five
+               times the value of BGP HoldTimer.</t>
+
+               <t/>
+             </section>
+         </section>
+
+
+    <section anchor="FSM" title="BGP Finite State Machine (FSM)">
 
       <section title="Optional Session Attributes">
         <t>This document adds two optional Session attributes to the list in
@@ -414,293 +705,6 @@
       </section>
 
     </section>
-
-    <section anchor="MBS" title="Multiple BGP Sessions">
-      <section title="Multiple QUIC Streams">
-
-        <t>In QUIC, application protocols exchange information via streams,
-          and multiple streams can be multiplexed onto an underlying
-          connection. Each stream is a separate unidirectional or
-          bidirectional channel of "order stream of bytes."
-          Moreover, each stream has flow control which limits bytes sent on a
-          stream, together with flow control of the connection.</t>
-      </section>
-      <section title="Multiple BGP Sessions Using QUIC Streams">
-        <t>
-          There are different options to map streams. This document specifies a
-          complementary and backward compatible mechanism to establish
-          multiple BGP sessions using QUIC streams.  An implementation can
-          assign one or more Network Layer protocols to a BGP session.
-        </t>
-        <t>A QUIC stream is created by sending a BGP OPEN message, and
-          each stream MUST be bidirectional as described in Section 2.1
-          of <xref target="RFC9000"/>.  In addition, the corresponding stream
-          MUST end (clean termination) as described in Section 2.4 of
-          <xref target="RFC9000"/> when a BGP session is terminated.
-        </t>
-        <t>
-          <xref target="connection"/> describes the Connection Collision
-          Detection procedure to be used with streams.  Each BGP session
-          operates independently, which means critical conditions (such
-          as a malformed message) in one session won't affect others.
-        </t>
-      </section>
-      <section anchor="MSC" title="MultiStream Capability">
-      <t>
-       The MultiStream Capability (MSC) is defined to indicate that a BGP
-       speaker supports multiple sessions as specified in this document.
-       The capability <xref target="RFC5492"/> is defined as follows:
-
-        <list style="empty">
-          <t>Capability code (1 octet): TBD1</t>
-          <t>Capability length (1 octet): 1</t>
-          <t>Capability value (1 octet): flag field reserved.</t>
-        </list></t>
-        <figure title="" suppress-title="false" align="left" alt="" width="" height="">
-        <artwork xml:space="preserve" name="" type="" align="left" alt="" width="" height="">
-   0 1 2 3 4 5 6 7
-  +-+-+-+-+-+-+-+-+
-  |   Reserved    |
-  +-+-+-+-+-+-+-+-+
-
-        </artwork>
-        </figure>
-        <t>Flags: bitfield - MUST be set to zero and ignored by the receiver.
-        </t>
-        <t>
-          The MSC only applies when using BGP over QUIC. It MUST be
-          included in all OPEN messages.  It MUST be ignored otherwise.
-        </t>
-        <t>
-          BGP multiple session support defined in <xref target="MBS"/>
-          applies only if both peers advertise the MSC
-          during the establishment of the "initial session." In
-          particular, if a peer that advertises the MSC doesn't receive an OPEN
-          message with the MSC from its peer, it SHOULD NOT terminate the
-          session.
-        </t>
-        <t>
-          Using the MSC allows peers to establish multiple BGP sessions, one
-          per QUIC stream.  Each new BGP session is established using a separate
-          OPEN message <xref target="RFC4271"/> and MUST include the MSC.  If
-          both peers exchange the MSC in the "initial session," they MUST
-          include it when establishing other sessions.  Otherwise, the new
-          session MUST be terminated, and the Error Subcode MUST be set to
-          MultiStream Conflict (TBD2), defined in
-          <xref target="notifications"/>.
-        </t>
-        <t>
-          Once a BGP session is established, it follows the procedures
-          specified in <xref target="RFC4271"/>.</t>
-      </section>
-      <section title="Modifications to FSM">
-      <t>
-        The modifications to BGP FSM is described in <xref target="FSM"/>.
-        For simplicity and security reason, it is suggested that 1-RTT
-        is used.
-      </t>
-      <t>
-        BGP multi-session support doesn't modify BGP FSM, but the collision
-        handling procedure should be replaced with the procedure described
-        below.
-      </t>
-      </section>
-      <section anchor="connection" title="BGP Session Establishment and Collision Avoidance">
-
-         <t>
-         Before creating a new session, a BGP speaker should check that no
-         session exists for the same Network Layer protocol(s).  If a session
-         already exists, the BGP speaker SHOULD NOT attempt to create a new one.
-         </t>
-         <t>
-         If a pair of BGP speakers try to establish a BGP session with each
-         other simultaneously, then two parallel sessions will be formed. In
-         the case of BGP over QUIC, the IP addresses of the connection cannot
-         be used to resolve collisions when using multiple streams.
-         </t>
-         <t>
-         To avoid connection collisions, a session is
-         identified by the My Autonomous System and BGP Identifier fields pair
-         in the OPEN message.  In this context, a connection collision is
-         the attempt to open a BGP session for which the set of
-         Network Layer protocols is the same.  One of the connections MUST be
-         closed.
-         </t>
-         <t>
-         The connection collision is resolved using the extension specified in
-         <xref target="RFC6286"/>.  In other words, the session with the
-         higher-valued BGP Identifier is preserved <xref target="RFC4271"/>.
-         If the BGP Identifiers are identical, then the session with the larger
-         ASN is preserved <xref target="RFC6286"/>.
-         </t>
-         <t>
-         Upon receiving an OPEN message, the local system MUST examine all of
-         its sessions in the OpenConfirm state. A BGP speaker MAY
-         also examine sessions in an OpenSent state if it knows the BGP
-         Identifier of the peer by means outside of the protocol.  If among
-         these sessions, there is one to a remote BGP speaker whose BGP
-         Identifier and ASN pair equals the one in the OPEN message, and this
-         session collides with the connection over which the OPEN message is
-         received, then the local system performs the following collision
-         resolution procedure:
-         <list style="empty">
-         <t>
-            1) The BGP Identifier of the local system is compared to the BGP
-               Identifier of the remote system (as specified in the OPEN
-               message).  Comparing BGP Identifiers is done by converting them
-               to host byte order and treating them as 4-octet unsigned
-               integers.
-               </t>
-               <t>
-            2) If the value of the local BGP Identifier is less than the
-               remote one, the local system closes the BGP connection that
-               already exists (the one that is already in the OpenConfirm
-               state) and accepts the BGP connection initiated by the remote
-               system.
-               </t>
-               <t>
-            2a) Otherwise, the local system closes the newly created BGP
-               connection (the one associated with the recently received OPEN
-               message) and continues to use the existing one (the one that
-               is already in the OpenConfirm state).
-               </t>
-               <t>
-            3) If the BGP Identifiers of the peers involved in the connection
-               collision are identical, then the session initiated by the BGP
-               speaker with the larger AS number is preserved.
-               </t>
-            </list></t>
-         <t>
-         Unless allowed via configuration, a connection collision with an
-         existing BGP session in the Established state causes the
-         closing of the newly created session.
-         </t>
-         <t>
-         Closing the BGP session (that results from the collision resolution
-         procedure) is accomplished by sending the NOTIFICATION message with
-         the Error Code Cease, Subcode Connection Collision Resolution (7)
-         <xref target="RFC4486"/>.
-         </t>
-         <t>
-         The remainder of the process is as specified in
-         <xref target="RFC4271"/>.
-         </t>
-      </section>
-    </section>
-
-    <section anchor="notifications" title="Error Handling">
-      <t>BGP over Quic error handling involves the
-          following three types of errors:</t>
-
-          <t>(1) QUIC error: Includes stream error and connection error <xref
-          target="RFC9001"/>. In some cases, a stream error may cause a
-          connection error. For example, if an operation error occurs on all
-          streams, the connection error should be triggered to close the
-          connection.</t>
-
-          <t>(2) TLS alert: In <xref target="RFC9001"/>,a QUIC endpoint MUST
-          treat any alert from TLS as if it were at the "fatal" level. For TLS
-          alerts, this includes replacing any alert with a generic alert, such
-          as handshake_failure (0x128 in QUIC).</t>
-
-          <t>(3) BGP error: If an error occurs in BGP processing <xref
-          target="RFC4271"/>, it can be mapped to the following BoQ Error
-          Codes<xref target="RFC9000"/>.</t>
-
-          <t>This document defines some of the following BoQ Error Codes:</t>
-
-          <t>(1) BOQ_NO_ERROR (0x00): No error. This is used when the
-          connection or stream needs to be closed, but there is no error to
-          signal.</t>
-
-          <t>(2) BOQ_INTERNAL_ERROR (0x01): The BoQ implementation encountered
-          an internal error and is incapable of continuing the stream or the
-          connection.</t>
-
-      <section title="Error Handling with MultiSteam Support">
-      <t>
-        OPEN message error handling is defined in section 6.2 of
-        <xref target="RFC4271"/>. This document introduces the following
-        OPEN Message Error subcodes:
-      <list style="empty">
-        <t>
-          TBD2 - MultiSession Conflict - Used if the MSC is exchanged by both
-          peers in the "initial session" but is not present when establishing
-          a new session.
-        </t>
-        <t>
-          TBD3 - Session Capability Mismatch -  Used if a BGP speaker
-          terminates a session in the case where it sends an OPEN message with
-          the MSC but receives an OPEN message without it.
-        </t>
-        <t>
-          TBD4 - Network Layer Protocol Mismatch - Used if a BGP session has
-          already been established for a signaled Network Layer Protocol,
-          either individually or as part of a set.
-        </t>
-      </list></t>
-      <t>
-        <xref target="MSC"/> recommends not terminating a session when only one
-        peer supports the MSC.  If such a BGP speaker does terminate the
-        session, the Error Subcode MUST be set to Session Capability Mismatch
-        (TBD3).
-      </t>
-      <t>
-        Any individual BGP session can be terminated as specified in
-        <xref target="RFC4486"/>.  If multiple sessions are to be terminated,
-        then the procedure MUST be followed for each one.
-      </t>
-      </section>
-      <section title="Session closure">
-          <t>QUIC provides three ways to close a connection(<xref
-          target="RFC9000"> see </xref> Section 10):</t>
-
-          <t>(1) Idle timeout</t>
-
-          <t>(2) Immediate Close</t>
-
-          <t>(3) Stateless Reset</t>
-
-          <t>When the idle timer expires, the connection is closed
-          immediately. Idle timeout can be calculated using the following
-          formula:</t>
-
-          <t>idle_timeout=MAX(min_idle_timeout, 3*PTO)</t>
-
-          <t>The PTO is a time that the sender should wait for an
-          acknowledgment of a sent packet. For a calculation method, refer to
-          <xref target="RFC9002"/> Section 6.2.1.</t>
-
-          <t>When establishing a QUIC connection, the transmission parameter
-          max_idle_timeout is used. Endpoints advertise local idle_timeout to
-          each other. If no max_idle_timeout advertisement is received from
-          the remote end, the remote idle_timeout is set to a value of 0.
-          Based on the values of local idle_timeout and remote idle_timeout,
-          there are three possible scenarios:</t>
-
-          <t>(1) If both the values are 0, disable the idle timeout
-          function.</t>
-
-          <t>(2) If there is only one value 0, set min_idle_timeout to a
-          non-zero value in between.</t>
-
-          <t>(3) If neither value is 0, set min_idle_timeout to the smaller
-          value.</t>
-
-          <t>Two options are available for the idle timer during BGP session
-          establishment. Option 1 is recommended by default.</t>
-
-          <t>Option 1: Set this parameter to 0, indicating that idle timeout
-          is disabled.</t>
-
-          <t>Option 2: The value must be greater than the value of BGP
-          HoldTimer. It is recommended that the value be greater than five
-          times the value of BGP HoldTimer.</t>
-
-          <t/>
-        </section>
-    </section>
-
 
     <section title="Operational Considerations">
       <section title="Using BoQ">
