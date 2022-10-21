@@ -99,7 +99,10 @@
 
      <t>
       This document specifies the procedures for BGP to use QUIC as
-      a transport protocol.
+      a transport protocol (<xref target="BoQ"/>), including error handling
+      (<xref target="notifications"/>).  Changes to the BGP Finite State
+      Machine (FSM) <xref target="RFC4271"/> are described in
+      <xref target="FSM"/>.
 	  </t>
 
     <section title="Requirements Language">
@@ -126,16 +129,15 @@
 
     <section title="Key Advantages and Design Consideration">
       <t>To use QUIC as a transport protocol for BGP, the following
-        design requirements should be considered.</t>
+        design requirements are considered.</t>
 
       <section title="BGP Specification Compatibility">
         <t>BoQ replaces only the transport layer of BGP over TCP.
           The BGP protocol specification remains backward compatible.</t>
 
-        <t>During the establishment of a BGP session, the BGP finite
-          state machine needs to receive transport-layer events. In BoQ,
-          these corresponding events are replaced by QUIC events and
-          processed by BGP.</t>
+        <t>During the establishment of a BGP session, the BGP FSM receives
+          transport-layer events. In BoQ, these corresponding events are
+          replaced by QUIC events (<xref target="FSM"/>).</t>
       </section>
 
       <section title="Confidentiality and Integrity">
@@ -154,45 +156,43 @@
 + - - - - - - - - - - - + - - - - - - - - - + - - - - - - - - +
 |                          IPv4 / IPv6                        |
 + - - - - - - - - - - - + - - - - - - - - - + - - - - - - - - +
-                Figure 1. QUIC Protocol Stack
+                Figure 1. BGP over QUIC Protocol Stack
 ]]></artwork>
 </figure></t>
 
       </section>
 
       <section title="Multiple QUIC Streams">
-        <t>QUIC supports stream multiplexing. In a QUIC connection, up
-          to 2 ^ 62 - 1 QUIC streams can be created,
-        and a QUIC stream can be unidirectional or bidirectional. In one
-        connection, data of multiple streams may be transmitted at the same
-        time. QUIC strictly ensures a transmission sequence of data of the
-        same stream, but does not guarantee a transmission sequence of data of
-        different streams. QUIC also supports stream-level flow control.</t>
-        <t>MP-BGP <xref target="RFC4760"/> supports multiple address
-          families, with one TCP connection these different services
-          compete for control plane resources. BoQ can have multiple BGP
-          sessions (streams) within one QUIC connection. There are different
-          ways to map QUIC streams, and an address family based solution is
-          specified in detail in <xref target="MBS"/>.</t>
+        <t>
+          QUIC supports stream multiplexing. In a QUIC connection, up to
+          2 ^ 62 - 1 QUIC streams can be created. In one connection, data of
+          multiple streams may be transmitted at the same time. QUIC strictly
+          ensures a transmission sequence of data of the same stream and
+          supports stream-level flow control.</t>
+        <t>
+          MP-BGP <xref target="RFC4760"/> speficies support for multiple
+          Network Layer protocols.  When using a TCP connection, these
+          different services compete for control plane resources. BoQ can have
+          multiple BGP sessions (streams) within one QUIC connection
+          (<xref target="MBS"/>).</t>
       </section>
 
     </section>
 
     <section anchor="BoQ" title="BGP over QUIC (BoQ)">
-      <t>Before two BGP speakers starting exchanging routing information,
+      <t>Before two BGP speakers start exchanging routing information,
         they need to establish a BGP session. A BGP session can be
         established in two phases:
       <list style="numbers">
 
-      <t>Establish a transport layer connection. For BGP over TCP, a
-        TCP connection is established through a three-way handshake. For
-        BoQ, a 1-RTT handshake or 0-RTT handshake is used to establish a
-        QUIC connection. (###should we use 0-RTT???)</t>
+      <t>
+        Establish a transport layer connection. See <xref target="BoQConn"/>.
+      </t>
 
-      <t>Establish a BGP session. After a transport-layer connection is
-        established, BGP peers exchange BGP Open and BGP Keepalive messages.
-        If the BGP peers reach the Established state, the BGP session has
-        been established.</t>
+      <t>
+        Establish a BGP session. After a transport-layer connection is established, BGP peers exchange protocol messages as specified in
+        <xref target="RFC4271"/>.  <xref target="MBS"/> specifies a mechanism
+        that allows multiple BGP sessions in a single QUIC connection.</t>
       </list></t>
 
       <t><xref target="RFC4271"/> defines BGP FSM operation, connection
@@ -203,7 +203,7 @@
       <section anchor="BoQConn" title="BoQ Connection Establishment">
        <t>
        BoQ uses QUIC version 1 as the underlying transport.  The use
-       of other QUIC transport versions with MAY be defined by future
+       of other QUIC transport versions with may be defined by future
        specifications.</t>
        <t>
        QUIC connections are established as described in
@@ -298,16 +298,16 @@
              Once a BGP session is established, it follows the procedures
              specified in <xref target="RFC4271"/>.</t>
          </section>
-         <section title="Modifications to FSM">
+         <section title="Modifications to the BGP FSM">
          <t>
-           The modifications to BGP FSM is described in <xref target="FSM"/>.
-           For simplicity and security reason, it is suggested that 1-RTT
-           is used.
+           The modifications to the BGP FSM are described in
+           <xref target="FSM"/>.  For simplicity and security reason, it is
+           suggested that 1-RTT is used.
          </t>
          <t>
-           BGP multi-session support doesn't modify BGP FSM, but the collision
-           handling procedure should be replaced with the procedure described
-           below.
+           BGP multi-session support doesn't modify the BGP FSM, but the
+           collision handling procedure should be replaced with the procedure
+           described below.
          </t>
          </section>
          <section anchor="connection" title="BGP Session Establishment and Collision Avoidance">
@@ -509,7 +509,7 @@
          </section>
 
 
-    <section anchor="FSM" title="BGP Finite State Machine (FSM)">
+    <section anchor="FSM" title="BGP Finite State Machine">
 
       <section title="Optional Session Attributes">
         <t>This document adds two optional Session attributes to the list in
