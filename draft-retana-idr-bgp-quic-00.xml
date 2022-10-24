@@ -61,6 +61,36 @@
         <email>yingzhen.qu@futurewei.com</email>
       </address>
     </author>
+
+    <author fullname="Shuanglong Chen" initials="S" surname="Chen">
+      <organization>Huawei Technologies</organization>
+      <address>
+        <postal>
+          <street>No.156 Beiqing Rd.</street>
+          <city>Beijing</city>
+          <region></region>
+          <code>100095</code>
+          <country>China</country>
+        </postal>
+        <phone></phone>
+        <email>chenshuanglong@huawei.com</email>
+      </address>
+    </author>
+
+    <author fullname="Jeff Tantsura" surname="Tantsura" initials="J">
+      <organization>Microsoft</organization>
+      <address>
+        <postal>
+        <street/>
+        <city/>
+        <region/>
+        <code/>
+        <country>USA</country>
+        </postal>
+        <email>jefftant.ietf@gmail.com</email>
+      </address>
+
+</author>
     <date/>
     <area>Routing</area>
     <workgroup>IDR Workgroup</workgroup>
