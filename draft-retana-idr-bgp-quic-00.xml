@@ -17,6 +17,7 @@
         <!ENTITY I-D.ietf-idr-bgp-multisession PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-idr-bgp-multisession-07.xml'>
         <!ENTITY I-D.chen-idr-bgp-over-quic PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-chen-idr-bgp-over-quic-00.xml'>
         <!ENTITY I-D.retana-idr-bgp-quic-stream PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-retana-idr-bgp-quic-stream-02.xml'>
+        <!ENTITY I-D.ietf-quic-version-negotiation PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-quic-version-negotiation-11.xml'>
         ]>
 <?rfc toc="yes"?>
 <?rfc tocompact="no"?>
@@ -232,9 +233,12 @@
 
       <section anchor="BoQConn" title="BoQ Connection Establishment">
        <t>
-       BoQ uses QUIC version 1 as the underlying transport.  The use
-       of other QUIC transport versions with may be defined by future
-       specifications.</t>
+       BoQ uses QUIC version 1 as the underlying transport.  Other QUIC
+       versions that meet the definition of a compatible version
+       <xref target="I-D.ietf-quic-version-negotiation"/> with version 1 MAY be
+       used.  The use of incompatible QUIC versions, as defined in
+       <xref target="I-D.ietf-quic-version-negotiation"/>, may be specified in
+       future documents.</t>
        <t>
        QUIC connections are established as described in
        <xref target="RFC9000"/>.  During connection establishment, a BGP
@@ -921,6 +925,7 @@
 
 <back>
     <references title="Normative References">
+        &I-D.ietf-quic-version-negotiation;
         &rfc2119;
         &rfc4271;
         &rfc4486;
