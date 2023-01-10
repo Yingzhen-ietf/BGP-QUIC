@@ -118,16 +118,16 @@
       The Multiprotocol Extensions for BGP-4 (MP-BGP) <xref target="RFC4760"/>
       allow BGP to carry information for multiple Network Layer protocols.
       However, only a single TCP connection can reach the Established state
-      between a pair of peers <xref target="RFC4271"/>.
+      between a pair of peers <xref target="RFC4271"/>.  As a consequence, an
+      error related to a particular Network Layer protocol may result in the
+      termination of the connection for all.
     </t>
     <t>
       QUIC <xref target="RFC9000"/> is a UDP-based multiplexed and secure
       transport protocol that provides connection-oriented and stateful
-      interaction between a client and server. It integrates TLS and
-      allows the exchange of application data as soon as possible.
-      QUIC can provide low latency and encrypted transport
-      with resilient connections.</t>
-
+      interaction between a client and server. It can provide low latency
+      and encrypted transport with resilient connections.
+    </t>
      <t>
       This document specifies the procedures for BGP to use QUIC as
       a transport protocol (<xref target="BoQ"/>), including error handling
@@ -146,16 +146,11 @@
     </section>
 
     <section title="Terminology">
-      <t>Client: QUIC client, the active part of QUIC connection.</t>
-
-      <t>Server: QUIC server, the passive part of QUIC connection.</t>
-
-      <t>BGP over TCP: BGP using TCP as the transport layer, as <xref
-      target="RFC4271"/>.</t>
-
-      <t>BoQ: BGP over QUIC, i.e., BGP using QUIC as the transport layer.</t>
-
-      <t/>
+      <t>
+        This document relies on the terminology used in
+        <xref target="RFC4271"/> and <xref target="RFC9000"/>.  Familiarity
+        with those documents is expected.
+      </t>
     </section>
 
     <section title="Key Advantages and Design Consideration">
@@ -163,8 +158,10 @@
         design requirements are considered.</t>
 
       <section title="BGP Specification Compatibility">
-        <t>BoQ replaces only the transport layer of BGP over TCP.
-          The BGP protocol specification remains backward compatible.</t>
+        <t>
+          BGP over QUIC (BoQ) replaces only the transport layer of BGP. The BGP
+          protocol specification remains backward compatible.
+        </t>
 
         <t>During the establishment of a BGP session, the BGP FSM receives
           transport-layer events. In BoQ, these corresponding events are
@@ -187,7 +184,7 @@
 + - - - - - - - - - - - + - - - - - - - - - + - - - - - - - - +
 |                          IPv4 / IPv6                        |
 + - - - - - - - - - - - + - - - - - - - - - + - - - - - - - - +
-                Figure 1. BGP over QUIC Protocol Stack
+                Figure 1. BoQ Protocol Stack
 ]]></artwork>
 </figure></t>
 
@@ -307,7 +304,7 @@
            <t>Flags: bitfield - MUST be set to zero and ignored by the receiver.
            </t>
            <t>
-             The MSC only applies when using BGP over QUIC. It MUST be
+             The MSC only applies when using BoQ. It MUST be
              included in all OPEN messages.  It MUST be ignored otherwise.
            </t>
            <t>
@@ -354,7 +351,7 @@
             <t>
             If a pair of BGP speakers try to establish a BGP session with each
             other simultaneously, then two parallel sessions will be formed. In
-            the case of BGP over QUIC, the IP addresses of the connection cannot
+            the case of BoQ, the IP addresses of the connection cannot
             be used to resolve collisions when using multiple streams.
             </t>
             <t>
@@ -430,7 +427,7 @@
 
 
          <section anchor="notifications" title="Error Handling">
-           <t>BGP over Quic error handling involves the
+           <t>BoQ error handling involves the
                following three types of errors:</t>
 
                <t>(1) QUIC error: Includes stream error and connection error <xref
@@ -596,9 +593,9 @@
           <t>(2) Handshake Confirmed: The QUIC has successfully completed the
           handshake.</t>
 
-          <t>On the client, the state is Handshake Complete and then Handshake
-          Confirmed. On the server, the two states are reached at the same
-          time.</t>
+          <t>On the QUIC client, the state is Handshake Complete and then
+            Handshake Confirmed. On the QUIC server, the two states are reached
+            at the same time.</t>
 
           <t>The transport layer events for BoQ FSM are defined as follows
           :</t>
@@ -805,9 +802,9 @@
       <t>BoQ enhances transport-layer security for BGP sessions, refer to <xref
       target="RFC7454"/> :</t>
 
-      <t>(1) Supports server identity authentication.</t>
+      <t>(1) Supports QUIC server identity authentication.</t>
 
-      <t>(2) (Optional) Supports client identity authentication.</t>
+      <t>(2) (Optional) Supports QUIC client identity authentication.</t>
 
       <t>(3) Confidentiality protection of BGP messages is supported. All BGP
       messages are encrypted for transmission.</t>
