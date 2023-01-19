@@ -160,12 +160,13 @@
         protocol specification remains backward compatible.
       </t>
       <t>Before two BGP speakers start exchanging routing information,
-        they need to establish a BGP session. A BGP session can be
+        they need to establish a BGP session. It is
         established in two phases:
       <list style="numbers">
 
       <t>
-        Establish a transport layer connection. See <xref target="BoQConn"/>.
+        Establish a transport layer connection. <xref target="BoQConn"/>
+        specifies the BoQ connecition establishment.
       </t>
 
       <t>
@@ -176,7 +177,7 @@
 
       <t>
         <xref target="RFC4271"/> defines the BGP FSM operation, including
-        transport connection conflict detection and resolution for. BoQ follows
+        transport connection conflict detection and resolution. BoQ follows
         the same definitions except where explicit modifications are defined in
         this document.
       </t>
@@ -193,32 +194,35 @@
        QUIC connections are established as described in
        <xref target="RFC9000"/>.  During connection establishment, a BGP
        speaker SHOULD use UDP port 179 and MUST select the Application-Layer
-       Protocol Negotiation (ALPN; see <xref target="RFC7301"/>) token "bgp4"
+       Protocol Negotiation (ALPN) <xref target="RFC7301"/> token "bgp4"
        in the TLS handshake.  Support for other application-layer protocols
        MUST NOT be offered in the same handshake.  A connection MUST be closed
        if the ALPN token is not as indicated, or if other application-layer
        protocols are offered in the same handshake.</t>
        <t>
         After a QUIC connection is established, the first message sent by each
-        endpoint is an OPEN message, which is used to indicate whether the
-        connection uses one of more QUIC streams to exchange BGP messages
-        (<xref target="MBS"/>).  The message format and framing is unchanged
-        [RFC4271].</t>
+        endpoint is a BGP OPEN message, which can be used to indicate whether
+        the speaker is capable of supporting more than one QUIC stream to
+        exchange BGP messages (<xref target="MBS"/>).  The message format and
+        framing is unchanged <xref target="RFC4271"/>.
+      </t>
        </section>
 
        <section anchor="MBS" title="Multiple BGP Sessions">
 
-           <t>In QUIC, application protocols exchange information via streams,
-             and multiple streams can be multiplexed onto an underlying
-             connection. Each stream is a separate unidirectional or
-             bidirectional channel of "order stream of bytes."
-             Moreover, each stream has flow control which limits bytes sent on a
-             stream, together with flow control of the connection.</t>
+           <t>
+             In QUIC, application protocols exchange information using streams.
+             Each stream is a separate unidirectional or bidirectional channel
+             of "order stream of bytes."  Moreover, each stream has flow
+             control which limits bytes sent on a stream, together with flow
+             control of the connection. Multiple streams can be multiplexed
+             onto an underlying connection.
+           </t>
          <section title="Multiple BGP Sessions Using QUIC Streams">
            <t>
-             There are different options to map streams. This document specifies a
-             complementary and backward compatible mechanism to establish
-             multiple BGP sessions using QUIC streams.  An implementation can
+             This document specifies a mechanism to establish
+             multiple BGP sessions using QUIC streams, one session per stream.
+             An implementation can
              assign one or more Network Layer protocols to a BGP session.
            </t>
            <t>A QUIC stream is created by sending a BGP OPEN message, and
