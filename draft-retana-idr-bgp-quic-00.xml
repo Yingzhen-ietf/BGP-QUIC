@@ -286,6 +286,36 @@
              Once a BGP session is established, it follows the procedures
              specified in <xref target="RFC4271"/>.</t>
          </section>
+         <section title="The Control Stream and Function Streams">
+          <t>If both peers support MSC, the "initial session" creates a
+            control stream for the BGP connection. The OPEN messages exchanged
+            contrain information such as its AS number and the BGP protocol
+            version it supports, if the peers agree on the parameters for
+            the session, they will begin to send BGP KEEPALIVE messages to
+            each other.
+          </t>
+          <t>If the entire BGP connection needs to be reset for any reason,
+            such as a configuration change or a network outage, a notification
+            is sent over the control stream to inform the other router that
+            the connection is being reset.
+          </t>
+          <t>In addition to the control stream, there may be other function
+            streams that are used to exchange specific types of routing
+            information. For example, one AFI/SAFI may be mapped to one
+            function stream. These function streams cannot be established
+            until the control stream has reached an established state.
+          </t>
+          <t>Each function stream has its own keepalive messages with its
+            own timers. These timers are used to ensure that the session
+            stays alive even if no routing updates are being exchanged.
+            Non-routing related function streams, such as BGP FLowSpec,
+            may have longer keepalive timers, for example 120 seconds,
+            as they do not need to exchange routing updates as frequently
+            as other function streams and can run in a relatively lower
+            priority.
+          </t>
+
+        </section>
          <section title="Modifications to the BGP FSM">
          <t>
            The modifications to the BGP FSM are described in
