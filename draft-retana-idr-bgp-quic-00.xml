@@ -287,9 +287,6 @@
              specified in <xref target="RFC4271"/>.</t>
          </section>
          <section title="The Control Stream and Function Streams">
-          <t>A single QUIC stream provides ordered and reliable delivery,
-            however there is no guarantee of transmission and deliver
-            order across streams.</t>
           <t>If both peers support MSC, the "initial session" creates a
             control stream for the BGP connection. The OPEN messages exchanged
             contrain information such as its AS number and the BGP protocol
@@ -304,7 +301,10 @@
           </t>
           <t>If for whatever reason the control stream is closed, the
             QUIC connection needs to be terminated using a CONNECTION_CLOSE
-            frame, and an error message (TBD) should be included.
+            frame, and an error message (TBD) should be included to indicate
+            that the connection has been terminated by BGP. If there are
+            other open streas, they are implicitly clsed when the connection
+            is closed.
           </t>
           <t>In addition to the control stream, there may be other function
             streams that are used to exchange specific types of routing
@@ -320,6 +320,12 @@
             as they do not need to exchange routing updates as frequently
             as other function streams and can run in a relatively lower
             priority.
+          </t>
+          <t>A single QUIC stream provides ordered and reliable delivery,
+            however there is no guarantee of transmission and deliver
+            order across streams. Therefore, if specific data from one
+            stream needs to be received before data from other streams,
+            this requirement must be accomplished through BGP..
           </t>
 
         </section>
