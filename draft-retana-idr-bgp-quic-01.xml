@@ -27,14 +27,14 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <?rfc strict="yes" ?>
-<rfc category="std" ipr="trust200902" docName="draft-retana-idr-bgp-quic-00">
+<rfc category="std" ipr="trust200902" docName="draft-retana-idr-bgp-quic-01">
   <!-- ***** FRONT MATTER ***** -->
   <front>
     <title abbrev="BGP over QUIC">BGP over QUIC</title>
 
     <author initials="A" surname="Retana"
     fullname="Alvaro Retana">
-      <organization>Futurewei Technologies, Inc.</organization>
+      <organization>Futurewei Technologies</organization>
 
       <address>
         <postal>
@@ -49,7 +49,7 @@
     </author>
 
     <author fullname="Yingzhen Qu" initials="Y" surname="Qu">
-      <organization>Futurewei Technologies, Inc.</organization>
+      <organization>Futurewei Technologies</organization>
       <address>
         <postal>
           <street>2330 Central Expressway</street>
