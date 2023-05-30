@@ -1,0 +1,7 @@
+Terminology
+QUIC connection  RFC9000
+QUIC streams  9000
+BGP channel:  Instance of BGP protocol state machine mapped to specific QUIC stream.
+BGP control channel
+(function/MP channel) BGP per AFI/SAFI channel
+Multi-Channel BGP
