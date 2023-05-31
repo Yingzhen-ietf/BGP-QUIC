@@ -4,6 +4,7 @@ QUIC streams  9000
 BGP channel:  Instance of BGP protocol state machine mapped to specific QUIC stream.
 BGP control channel
 (function/MP channel) BGP per AFI/SAFI channel
+Multi-channel BGP
 
 ## Introduction
 The Border Gateway Protocol (BGP) <xref target="RFC4271"/> is the routing protocol used to exchange routing and reachability information among autonomous systems, and it uses TCP as its transport protocol to provide reliable packet communication.  BGP establishes peer relationships between routers using a TCP session on port 179.
@@ -69,11 +70,11 @@ route advertisements.  Both BGP speakers can create each a functional
 channel to implement symmetric route advertisements.
 
 Each functional channel is created independently, to naturally support
-multi-session BGP. The neighbor state machines are decoupled, in case
+multi-channel BGP. The neighbor state machines are decoupled, in case
 of error it is possible to reset only one functional channel (one
 direction of the symmetric route exchange).
 
-### Channel reset
+### Channel Reset
 
 If the entire BGP connection needs to be reset for any reason, such as
 a configuration change or a network outage, a notification is sent
@@ -86,8 +87,40 @@ should be included to indicate that the connection has been terminated
 by BGP. If there are other open channels, they are implicitly closed
 when the connection is closed.
 
+A function channel can be reset independently without impacting any
+other function channels.
+
+### Channel Coordination
+
 A single QUIC stream provides ordered and reliable delivery, however
 there is no guarantee of transmission and deliver order across
 streams. Therefore, if specific data from one channel needs to be
 received before data from other channels, this requirement must be
 accomplished through BGP.
+
+
+## Protocol Definitions
+
+### BGP QUIC Capability
+
+A new ”BGP over QUIC” capability in the OPEN message to signal the BGP speaker is a QUIC client, a QUIC server or any (Don’t care). To be a client or server, it needs to be explicitly configured for a BGP speaker, otherwise the default value is “any”.
+BoQ capability:
+  Code: TBD (to be assigned by IANA)
+  Length: 1(octet)
+  Value:
+    0 Any
+    1 Client
+    2 Server
+
+This ONLY applies to the control channel. If the BoQ capability is sent in OPEN message for any AFI/SAFI channel, it MUST be ignored. A BGP speaker SHOULD support the explicit configuration of it as a client, a server or any. Before a control channel is created, a BGP speaker SHOULD check whether its configuration matches the QUIC connection role. If they don't match, the QUIC connection SHOULD be terminated. For example, if a BGP speaker is configured as a client, but the QUIC connection comes up as a QUIC server, the QUIC connection should be terminated.
+
+If a BGP speaker is configured as QUIC client, it SHOULD try to initiate the QUIC connection. If a BGP speaker is configured as QUIC server, it SHOULD wait for a QUIC connection.
+When both BGP peers are explicitly configured (one side as client and the other side as server), no collision will happen.
+When both BGP peers are “any”, existing session collision mechanism are used.
+When both BGP peers are explicitly configured as client (configuration error), a new OPEN message error subcode (BoQ error) MUST be sent.
+When both BGP peers are explicitly configured as server (configuration error), no connection will be initiated.
+For peering between router A and router B, if A is configured as client and B is any, the following rules are followed:
+When A starts a connection as the client, B accepts it.
+When B starts a connection as the client, A should start a connection to B as the client, and this stream should be used.
+When there are two simultaneous connections, the one with A as the client wins (modification to existing collision resolution). 
+For peering between router A and router B, if A is configured as server and B is any, A will wait for the connection from B.
