@@ -31,12 +31,18 @@ This document specifies the procedures for BGP to use QUIC as a transport protoc
 
 Before two BGP speakers start exchanging routing information, they need to establish a BGP session. It is established in two phases:
 
- - Establish a transport layer connection. TLS 1.3 is integrated with QUIC, how TLS authentication should be done is out of scope of this draft. We assume a QUIC connection can be established here.
- - Establish a BGP session. This draft specifies the details that allow multiple BGP sessions in a single QUIC connection.
+ - Establish a transport layer connection. TLS 1.3 is integrated with QUIC. The TLS authentication parameters used for this connection are out of scope of this draft. 
+ - Establish a BGP over QUIC session over this connection. This draft specifies the details that allow BGP channels to be carried over this QUIC connection.
 
-[RFC4271] defines the BGP FSM operation. BoQ extends RFC4271 FSM to be able to adddress individual BGP channels.
+QUIC connections are established as described in [RFC9000].  During connection establishment, a BGP speaker SHOULD use UDP port TBD and MUST select the Application-Layer Protocol Negotiation (ALPN) [RFC7301] token "boq" in the TLS handshake.  Support for other application-layer protocols MUST NOT be offered in the same handshake. A connection MUST be closed if the ALPN token is not as indicated, or if other application-layer protocols are offered in the same handshake.
 
-QUIC connections are established as described in [RFC9000].  During connection establishment, a BGP speaker SHOULD use UDP port xxx and MUST select the Application-Layer Protocol Negotiation (ALPN) [RFC7301] token "boq" in the TLS handshake.  Support for other application-layer protocols MUST NOT be offered in the same handshake. A connection MUST be closed if the ALPN token is not as indicated, or if other application-layer protocols are offered in the same handshake.
+[RFC4271] defines the BGP Finite State Machine (FSM) operations for a single BGP session between two BGP speakers using TCP.  This document defines the ability to carry BGP over multiple QUIC streams as "BGP channels".  
+
+On a BGP over QUIC connection, the BGP over QUIC speaker first establishes a bidirectional stream for the "BGP control channel".  The control channel is used to establish a BGP peer relations between two BGP over QUIC speakers similar to RFC 4271.  Open messages are exchanged on the control channel, and if the BGP over QUIC session parameters are acceptable, the peering session comes up. Afterward the per-AFI/SAFI function channels may then be created.  Similar to RFC 4271, if the parameters are not acceptable, the BGP over QUIC session is terminated with a NOTIFICATION message.
+
+After the control channel is Established, each BGP over QUIC speaker may create per-AFI/SAFI function channels using a unidirectional QUIC stream.  These function channels are used to carry BGP routes for that AFI/SAFI.  There SHALL NOT be more than one function channel per AFI/SAFI from one BGP over QUIC speaker to the other. Unlike RFC 4271 BGP, there is no requirement that both BGP over QUIC speakers have a symmetric and matching set of per-AFI/SAFI channels.
+
+BGP channels largely use the mechanisms of the RFC 4271 FSM for their establishment. For the control channel carried over a bidirectional QUIC stream, the FSM is identical to the RFC 4271 FSM.  However, since the per-AFI/SAFI function channels are unidirectional, the RFC 4271 FSM procedures cannot be carried solely using the unidirectional channel from one BGP over QUIC speaker to another.  Instead, responding BGP speaker must carry its replies for the unidirectional streams over the control channel and are addressed to a specific BGP function channel.
 
 ### Establish BGP/QUIC Control Channel
 
