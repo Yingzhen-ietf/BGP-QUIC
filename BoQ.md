@@ -59,29 +59,29 @@ QUIC supports connection migration, however only the client side can move.  The 
 
 ### Establish BGP/QUIC Function Channel
 
+Per-AFI/SAFI Function channels are used to
+exchange routing information. After the control
+channel reaches Established state, function channels are created as
+unidirectional QUIC streams and advertise per-AFI/SAFI routes using BGP Update messages.  There SHALL NOT be more than one per-AFI/SAFI function channel for each BGP speaker; they are unique.
 
+BGP over QUIC speakers asymmetrically create their per-AFI/SAFI function channels.  While it might be the typical case for there to be a symmetric set of per-AFI/SAFI function channels, one for each speaker, this is not a requirement.  For example, BGP-LS <xref target="https://datatracker.ietf.org/doc/html/rfc7752"/> may only require that a BGP speaker asymmetrically receive BGP-LS NLRI, and may not need to send them.
 
-The procedure to reach the Established state in the control channel is the same as what is currently specified in rfc4271.
-
-In addition to the control channel, function channels are used to
-exchange specific types of routing information. After the control
-channel reaches established state, function channels can be created as
-unidirectional QUIC streams to advertise specific AFI/SAFI routes.
-
-BoQ supports two modes of route advertisement, symmetric and
-asymmetric.  Symmetric route advertisement occurs when both BGP
-speakers need to send updates to their neighbors, for a specific
-AFI/SAFI.  Asymmetric route advertisement occurs when only one BGP
-speaker needs to send updates to its neighbor.  BGP-LS or flow-spec
-may be examples of asymmetric route advertisement.
-
+(XXX Alvaro)
 A BGP speaker that needs to advertise routes to its peer opens a
-unidirectional functional channel to its neighbor and sends an OPEN
-message indicating the particular AFI/SAFI to be used.  Only one
-AFI/SAFI is permitted per functional channel, and only one functional
-channel per AFI/SAFI can exist.  The receiver replies with an OPEN_ACK
-(Section y) message in the control channel.  Once the BGP session is
-established the sender can advertise routes.
+unidirectional stream to its neighbor and sends an OPEN
+message indicating the particular AFI/SAFI to be used.  The BGP over QUIC connection-wide parameters have previously been exchanged over the control channel. The per-AFI/SAFI function channel OPEN messages MUST contain identical BGP Autonomous System number and BGP Identifier as the previously Established control channel.  It is RECOMMENDED that the BGP Holtime value exchanged in the per-AFI/SAFI function channels is significantly longer than the holdtime negotiated for the control channel.  It is the responsibility of the holdtimer for the control channel to provide connection verification for the BGP over QUIC connection.  The purpose of the per-AFI/SAFI function channel negotiated holdtime is to provide verification of communication between  the two BGP over QUIC speakers for that AFI/SAFI.
+
+The BGP Capabilities carried on the per-AFI/SAFI channel SHOULD only be those that are per-AFI/SAFI specific.  Conflicting BGP over QUIC connection-wide parameters exchanged over the per-AFI/SAFI function channels MAY BE reason for the BGP speaker to send a NOTIFICATION message and not to permit the per-AFI/SAFI function channel to become Established. 
+
+The BGP over QUIC speaker creates the per-AFI/SAFI channel by sending its OPEN message over the newly created QUIC unidirectional stream.  The receiving BGP speaker replies to those messages as defined in the RFC 4271 FSM by sending its messages (OPEN/NOTIFICATION/KEEPALIVE) addressed to the sender over the control channel.
+
+(TODO - now is the point to discuss changes to BGP messages to support BGP Channels, including how do we address specific BGP PDUs to the receiver and is this in the QUIC frame or the BGP PDU)
+
+
+-----
+
+Once the per-AFI/SAFI function channel has reached the Established state, it may send BGP Update messages to the remote BGP over QUIC speaker.
+
 
 A single functional channel for an AFI/SAFI pair results in asymmetric
 route advertisements.  Both BGP speakers can create each a functional
