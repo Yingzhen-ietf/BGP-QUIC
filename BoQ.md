@@ -1,25 +1,28 @@
 ## Terminology
-QUIC connection  RFC9000
-QUIC streams  9000
-BGP channel:  Instance of BGP protocol state machine mapped to specific QUIC stream.
-BGP control channel
-(function/MP channel) BGP per AFI/SAFI channel
-Multi-channel BGP
+* TODO - do we need to define channel?  
+* Multi-channel BGP using QUIC: Running the BGP protocol over multiple QUIC streams as defined in this document.
+* QUIC connection (defined in RFC 9000)
+* QUIC streams (defined in RFC 9000)
+* BGP channel: Instance of BGP protocol state machine mapped to specific QUIC stream.
+* BGP control channel (implemented as bidirectional stream)
+* (function/MP channel) BGP per AFI/SAFI channel (implemented asymmetrically as unidirectional streams)
 
 ## Introduction
-The Border Gateway Protocol (BGP) <xref target="RFC4271"/> is the routing protocol used to exchange routing and reachability information among autonomous systems, and it uses TCP as its transport protocol to provide reliable packet communication.  BGP establishes peer relationships between routers using a TCP session on port 179.
+The Border Gateway Protocol (BGP) <xref target="RFC4271"/> is the routing protocol used to exchange routing and reachability information among autonomous systems. BGP uses TCP as its transport protocol to provide reliable packet communication.  BGP establishes peer relationships between routers using a TCP session on port 179.
 
 The Multiprotocol Extensions for BGP-4 (MP-BGP) <xref target="RFC4760"/> allow BGP to carry information for multiple Network Layer protocols. However, only a single TCP connection can reach the Established state between a pair of peers <xref target="RFC4271"/>.  As a consequence, an error related to a particular Network Layer protocol may result in the termination of the connection for all.
+
+Previous proposals attempt to address the issue of errors for individual Network Layer protocols (AFI/SAFI) by providing extensions to run multiple BGP sessions between two BGP speakers.  One such example, BGP multisession <xref target="https://datatracker.ietf.org/doc/html/draft-ietf-idr-bgp-multisession"/>, uses multiple TCP sessions between the two participating BGP speakers.  However, this proposal has not gained widespread adoption.
 
 QUIC <xref target="RFC9000"/> is a UDP-based multiplexed and secure transport protocol that provides connection-oriented and stateful interaction between a client and server. It can provide low latency and encrypted transport with resilient connections.
 
 In QUIC, application protocols exchange information using streams.
-Each stream is a separate unidirectional or bidirectional channel of
-"order stream of bytes." Moreover, each stream has its own flow
+Each stream is a separate unidirectional or bidirectional channel consisting of an
+ordered stream of bytes. Moreover, each stream has its own flow
 control which limits bytes sent on a stream, together with flow
 control of the connection.
 
-This document specifies the procedures for BGP to use QUIC as a transport protocol with a mechanism to establish multiple BGP channels using QUIC streams. In one BGP over QUIC connection, there is always a control channel, and one or more channels used to advertise routing information.
+This document specifies the procedures for BGP to use QUIC as a transport protocol with a mechanism to carry multiple BGP address families (AFI/SAFI) over individual streams.  These per-AFI/SAFI streams (function channels), and the associated control mechanism (control channel) for the session are called "BGP channels". In one BGP over QUIC connection, there is always one control channel, and one or more per-AFI/SAFI function channels used to carry routing information.
 
 
 ## Summary of Operations
