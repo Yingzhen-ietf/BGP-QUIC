@@ -74,6 +74,8 @@ multi-channel BGP. The neighbor state machines are decoupled, in case
 of error it is possible to reset only one functional channel (one
 direction of the symmetric route exchange).
 
+
+
 ### Channel Reset
 
 If the entire BGP connection needs to be reset for any reason, such as
@@ -92,18 +94,36 @@ other function channels.
 
 ### Channel Coordination
 
+Each function channnel has its own keepalive messages with its own
+timers.  These timers are used to ensure that the session stays alive
+even if no routing updates are being exchanged.  Non-routing related
+function channels, such as BGP FLowSpec, may have longer keepalive
+timers, for example 120 seconds, as they do not need to exchange
+routing updates as frequently as other function channels and can run
+in a relatively lower priority.
+   
 A single QUIC stream provides ordered and reliable delivery, however
 there is no guarantee of transmission and deliver order across
 streams. Therefore, if specific data from one channel needs to be
 received before data from other channels, this requirement must be
 accomplished through BGP.
 
+As defined in [RFC9000], a QUIC implementation SHOULD provide ways in
+which an application can indicate the relative priority of streams.
+
+For a BGP implementation utilizing QUIC as its transport protocol,
+it MUST support a prioritization mechanism for BGP streams.  This is
+essential for ensuring that critical routing information can be transmitted
+with higher priority compared to non-routing information.
+
+How to implement the supported priorities using QUIC congestion control at connection level, stream level flow control, and packetization are out of the scope of this document.
 
 ## Protocol Definitions
 
 ### BGP QUIC Capability
 
 A new ”BGP over QUIC” capability in the OPEN message to signal the BGP speaker is a QUIC client, a QUIC server or any (Don’t care). To be a client or server, it needs to be explicitly configured for a BGP speaker, otherwise the default value is “any”.
+
 BoQ capability:
   Code: TBD (to be assigned by IANA)
   Length: 1(octet)
@@ -121,6 +141,12 @@ When both BGP peers are explicitly configured as client (configuration error), a
 When both BGP peers are explicitly configured as server (configuration error), no connection will be initiated.
 For peering between router A and router B, if A is configured as client and B is any, the following rules are followed:
 When A starts a connection as the client, B accepts it.
-When B starts a connection as the client, A should start a connection to B as the client, and this stream should be used.
+When B starts a connection as the client, A should start a connection to B as the client, and this connection should be used.
 When there are two simultaneous connections, the one with A as the client wins (modification to existing collision resolution). 
 For peering between router A and router B, if A is configured as server and B is any, A will wait for the connection from B.
+
+### Collision Avoidance
+
+Before creating a new channel, a BGP speaker should check that no channel exists for the same Network Layer protcol. If a channel already exists, the BGP speaker SHOULD NOT attemp to create a new one.
+
+## Error Handling
