@@ -46,11 +46,20 @@ BGP channels largely use the mechanisms of the RFC 4271 FSM for their establishm
 
 ### Establish BGP/QUIC Control Channel
 
-The control channel is a bidirectional QUIC stream, and is created by sending a BGP OPEN message. This OPEN message is unchanged but it doesn't include the multiprotocol capability. The control channel has to reach established state before any other channel can be created.
+After BGP over QUIC session establishment, the BGP over QUIC speakers will create their control channels.  The control channel is a bidirectional QUIC stream.  It is created by sending a BGP OPEN message. BGP OPEN messages carry parameters such as the Autonomous System number, BGP Identifier (router-id), Hold Time, and Capabilities.  These parameters are used by a BGP speaker to decide whether a BGP session is permitted to be established.
+
+The capabilities carried in this OPEN message for the control channel are the BGP over QUIC connection specific parameters; i.e. those that apply to the entire connection.  An example of this is the BGP Role Capability <xref target="https://www.rfc-editor.org/rfc/rfc9234.html"/>. 
+
+The control channel uses BGP holdtime procedures as specified in RFC 4271.  A Keepalive timer is used to periodically send KEEPALIVE messages in the absence of other messages on the control channel.  If no messages are received within the negotiated holdtime on the control channel, the BGP over QUIC connection is closed with a NOTIFICATION sent on the control channel.  In short, the BGP over QUIC control channel is used to establish the peering relationship and connection parameters between the two BGP speakers, ensure connectivity over this session is verified, and further is used as the response channel for the per-AFI/SAFI function channels as specified in the next section.
+
+If the parameters for the BGP over QUIC session carried on the control channel are acceptable, the control channel enters the Established state.  Afterwards the per-AFI/SAFI function channels can then be created. The BGP function channels carry the per-AFI/SAFI routing information in BGP Updates.  Per-AFI/SAFI capabilities only need to be carried on those function channels.
+
+(TODO)
+QUIC supports connection migration, however only the client side can move.  The role of the QUIC endpoints is important.  For future extensibility, a new BoQ Capability indicates the configured role of the BGP speaker: Client, Server, or Any.  It is expected that the BGP configuration and QUIC roles match.  The QUIC connection can be reset if they don't.  See Section x for details.
 
 ### Establish BGP/QUIC Function Channel
 
-QUIC supports connection migration, however only the client side can move.  The role of the QUIC endpoints is important.  For future extensibility, a new BoQ Capability indicates the configured role of the BGP speaker: Client, Server, or Any.  It is expected that the BGP configuration and QUIC roles match.  The QUIC connection can be reset if they don't.  See Section x for details.
+
 
 The procedure to reach the Established state in the control channel is the same as what is currently specified in rfc4271.
 
