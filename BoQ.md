@@ -2,7 +2,7 @@
 * TODO - do we need to define channel?  
 * Multi-channel BGP using QUIC: Running the BGP protocol over multiple QUIC streams as defined in this document.
 * QUIC connection (defined in RFC 9000)
-* QUIC streams (defined in RFC 9000)
+* QUIC streams - A bidirectional or unidirectional bytestream provided by the QUIC transport (defined in RFC 9000)
 * BGP channel: Instance of BGP protocol state machine mapped to specific QUIC stream.
 * BGP control channel (implemented as bidirectional stream)
 * (function/MP channel) BGP per AFI/SAFI channel (implemented asymmetrically as unidirectional streams)
@@ -46,7 +46,7 @@ BGP channels largely use the mechanisms of the RFC 4271 FSM for their establishm
 
 ### Establish BGP/QUIC Control Channel
 
-After BGP over QUIC session establishment, the BGP over QUIC speakers will create their control channels.  The control channel is a bidirectional QUIC stream.  It is created by sending a BGP OPEN message. BGP OPEN messages carry parameters such as the Autonomous System number, BGP Identifier (router-id), Hold Time, and Capabilities.  These parameters are used by a BGP speaker to decide whether a BGP session is permitted to be established.
+After BGP over QUIC session establishment, the BGP over QUIC speakers will create their control channel.  The control channel is a bidirectional QUIC stream.  It is created by sending a BGP OPEN message. BGP OPEN messages carry parameters such as the Autonomous System number, BGP Identifier (router-id), Hold Time, and Capabilities.  These parameters are used by a BGP speaker to decide whether a BGP session is permitted to be established.
 
 The capabilities carried in this OPEN message for the control channel are the BGP over QUIC connection specific parameters; i.e. those that apply to the entire connection.  An example of this is the BGP Role Capability <xref target="https://www.rfc-editor.org/rfc/rfc9234.html"/>. 
 
@@ -83,14 +83,14 @@ The BGP over QUIC speaker creates the per-AFI/SAFI channel by sending its OPEN m
 Once the per-AFI/SAFI function channel has reached the Established state, it may send BGP Update messages to the remote BGP over QUIC speaker.
 
 
-A single functional channel for an AFI/SAFI pair results in asymmetric
-route advertisements.  Both BGP speakers can create each a functional
+A single function channel for an AFI/SAFI pair results in asymmetric
+route advertisements.  Both BGP speakers can create each a function
 channel to implement symmetric route advertisements.
 
-Each functional channel is created independently, to naturally support
+Each function channel is created independently, to naturally support
 multi-channel BGP. The neighbor state machines are decoupled, in case
-of error it is possible to reset only one functional channel (one
-direction of the symmetric route exchange).
+of error it is possible to reset only one function channel (one
+direction of the symmetric route exchange). If one function channel is blocked for some reasome, other channels can still progress and operate.  
 
 
 
@@ -163,8 +163,143 @@ When B starts a connection as the client, A should start a connection to B as th
 When there are two simultaneous connections, the one with A as the client wins (modification to existing collision resolution). 
 For peering between router A and router B, if A is configured as server and B is any, A will wait for the connection from B.
 
-### Collision Avoidance
+### Capability Category
+
+```md
+|Value| Name                              | Ref     | Control/Function |
+|-----| --------------------------------- | ------- | -----------------|
+| 1   | Multiprotocol Extensions for BGP-4| RFC2858 | Function         |
+| 2   | Route Refresh Capability for BGP-4| RFC2918 | Function         |
+| 3   |Outbound Route Filtering Capability| RFC5291 | C/F             |
+| 5   | Extended Next Hop Encoding        | RFC8950 | C/F
+| 6   | BGP Extended Message              | RFC8654 | C
+| 7   | BGPsec Capability                 | RFC8205 | C
+| 8   | Multiple Labels Capability        | RFC8277 | C
+| 9   | BGP Role                          | RFC9234 | C		
+| 64  | Graceful Restart Capability       | RFC4724 | F
+| 65  | Support for 4-octet AS number     | RFC6793 | C
+|     |  capability                       |
+| 67  | Support for Dynamic Capability    |         |
+|     | (capability specific)             |draft-ietf-idr-dynamic-cap
+| 68  | Multisession BGP Capability       |draft-ietf-idr-bgp-multisession
+| 69  | ADD-PATH Capability               | RFC7911 | F
+| 70  | Enhanced Route Refresh Capability | RFC7313 | F
+| 71  | Long-Lived Graceful Restart (LLGR)|
+|     | Capability                        |draft-uttaro-idr-bgp-persistence
+| 72  | Routing Policy Distribution       |draft-ietf-idr-rpd|	
+| 73  | FQDN Capability                   |draft-walton-bgp-hostname-capability
+| 74  | BFD Capability                    |draft-ietf-idr-bgp-bfd-strict-mode
+| 75  | Software Version Capability	[draft-abraitis-bgp-version-capability-11]	IETF
+| ... | ...  |
+
+Table: BGP Capability Category.
+```
+
+### Channel Collision Avoidance
 
 Before creating a new channel, a BGP speaker should check that no channel exists for the same Network Layer protcol. If a channel already exists, the BGP speaker SHOULD NOT attemp to create a new one.
 
+If a BGP speaker receives a function channel creation request for an AFI/SAFI that already exists, the local BGP speaker SHOULD send a notification with Error Code Sease and subcode BOQ_CHANNEL_CONFLICT through the control channel. (or OPEN Message Error Subcode???? in this case, not only the AFI/SAFI info needed, the stream ID is also needed)
+
+If a BGP speaker receives a functional channel creation request for an AFI/SAFI that it doesn't support, the local BGP speaker SHOULD send a notification with Erro Code Cease and Subcode BOQ_CHANNEL_NOSUPPORT through the control channel.
+
+Unless allowed via configuration, a channel collision with an existing BGP channel in the Established state causes the closing of the newly created channel.
+
+### Message Format
+
+- OPEN Message
+OPEN message sent in the control channel for the control channel creation MUST NOT contain Multiprotocl Extensions Capability (value 1) in the Capabilites.
+OPEN message sent in a function channel and the responding OPEN message sent in the control channel for one AFI/SAFI MUST contain only one Multiprotocl Extensions Capability (value 1) in the Capabilites. 
+- KEEPALIVE
+**(TODO)
+For the keepalive messages sent in the control channel for one AFI/SAFI, the AFI/SAFI info should be indicatd somehow. 
+BGP level: change the message format and add the AFI/SAFI info.
+QUIC level: for all packets sent in the control channel, add the AFI/SAFI info. 
+- NOTIFICATION 
+** same as above.
+
 ## Error Handling
+* channel connection error: 
+** AFI/SAFI conflict: already exists or conflicts with existing AFI/SAFI
+
+* Connection error
+
+## Operational Considerations
+
+### Using Multi Channel BGP over QUIC
+The decision to use BoQ instead of the TCP-based mechanism defined in
+[RFC4271] is an operational decision and out of the scope of this
+document.  An implementation MUST provide a configuration mechanism
+to enable BoQ on a per-peer basis. 
+Connectivity problems (e.g., blocking UDP) can result in a failure to
+establish a QUIC connection; BGP speakers SHOULD attempt to establish
+a TCP-based BGP session in this case.
+
+### BGP Multi Channel Prioritization
+One of the drawbacks of a single BGP over TCP session is that control plane messages for all supported Network Layer protocols use the same connection, which may cause resource contention.
+
+QUIC [RFC9000] does not provide a mechanism for exchanging
+prioritization information.  Instead, it recommends that
+implementations provide ways for an application to indicate the
+relative priority of streams, in this case, mapped to BGP channels.
+An operator should prioritize BGP channels (streams) that carry
+critical control plane information if the functionality is available.
+The definition of this functionality and the determination of the
+importance of a BGP channel are both outside the scope of this
+document.
+
+An example implementation is to have four priority (0-3) defined, and
+smaller number means higher priority.  Each AFI/SAFI should be
+assigned a default priority and optional configuration to modify the
+default value.  For example, IPv4 and IPv6 unicast AFI/SAFI (1/1 and
+2/1) may have priority of 1, while BGP-LS (16388/71 and 16388/72) may
+have a priority of 3, and BGP FlowSpec (1/133 and 1/134) may have a
+priority of 4.
+
+
+## IANA Considerations
+
+### UDP Port for BoQ
+
+IANA is requested to add a reference to [this document] for the UDP
+port 179 entry in the "Service Name and Transport Protocol Port
+Number Registry".
+
+### Registration of the BGP4 Identification String
+
+This document creates a new registration for the identification of
+BGP [RFC4271] in the "TLS Application-Layer Protocol Negotiation
+(ALPN) Protocol IDs" registry.
+
+   The "boq" string identifies BGP-4 [RFC4271] over QUIC:
+
+   Protocol: Multi-Channel BGP over QUIC
+
+   Identification Sequence: 0x62 0x6f 0x71 ("boq")
+
+   Specification: This document
+   
+### BGP Over QUIC Capability
+
+   IANA is asked to assign a new Capability Code for the BGP over QUIC
+   Capability (Section 3.2.2) as follows:
+
+    +=======+========================+===========+===================+
+    | Value | Description            | Reference | Change Controller |
+    +=======+========================+===========+===================+
+    | TBD1  | BoQ Capability         | [This     | IETF              |
+    |       |                        | Document] |                   |
+    +-------+------------------------+-----------+-------------------+
+
+                     Table 1: BoQ Capability
+### Error Codes
+IANA is asked to assign two values from the Cease NOTIFICATION
+   Message Error subcodes registry as follows:
+
+     +=======+=====================+=============+================+
+     | Value | Name                | Action      |Reference       |
+     +=======+=====================+=============+================+
+     | TBD   |BOQ_CHANNEL_CONFLICT |Stream Closed|[This Document] |
+     +-------+---------------------+-------------+----------------+
+     | TBD   |BOQ_CHANNEL_NOSUPPORT|Stream Closed|[This Document] |
+     +-------+---------------------+-------------+----------------+
