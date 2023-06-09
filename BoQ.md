@@ -138,7 +138,7 @@ How to implement the supported priorities using QUIC congestion control at conne
 
 ## Protocol Definitions
 
-### BGP QUIC Capability
+### BGP Over QUIC Capability
 
 A new ”BGP over QUIC” capability in the OPEN message to signal the BGP speaker is a QUIC client, a QUIC server or any (Don’t care). To be a client or server, it needs to be explicitly configured for a BGP speaker, otherwise the default value is “any”.
 
@@ -224,6 +224,9 @@ QUIC level: for all packets sent in the control channel, add the AFI/SAFI info.
 
 * Connection error
 
+## BGP Finite State Machine
+TBD
+
 ## Operational Considerations
 
 ### Using Multi Channel BGP over QUIC
@@ -256,6 +259,40 @@ default value.  For example, IPv4 and IPv6 unicast AFI/SAFI (1/1 and
 have a priority of 3, and BGP FlowSpec (1/133 and 1/134) may have a
 priority of 4.
 
+## Security Considerations
+This document replaces the transport protocol layer of BGP from TCP
+   to QUIC.  It does not modify the basic protocol specifications of
+   BGP, and therefore does not introduce new security risks to the basic
+   BGP protocol.  The non-TCP-related considerations of [RFC4271],
+   [RFC4272], and [RFC7454] apply to the specification in this document.
+
+BoQ enhances transport-layer security for BGP sessions, refer to
+   [RFC7454] :
+
+   (1) Supports QUIC server identity authentication.
+
+   (2) (Optional) Supports QUIC client identity authentication.
+
+   (3) Confidentiality protection of BGP messages is supported.  All BGP
+   messages are encrypted for transmission.
+
+   (4) Supports integrity protection for BGP messages.
+
+   The use of a specific UDP port number and an ALPN token
+   protects a BGP Speaker from attempts to establish an unexpected BGP
+   session.  Additionally, all packets directed to UDP port 179 on the
+   local device and sourced from an address not known or permitted to
+   become a BGP neighbor SHOULD be discarded.
+
+   With BGP multi channel support using QUIC streams, it separates the
+   control plane traffic over multiple channels, the effect of a
+   session-based vulnerability is reduced; only a single channel is
+   affected and not the whole connection.  The result is increased
+   resiliency.
+
+   On the other hand, a high number of BGP channels may result in higher
+   resource utilization and the risk of depletion.  Also, more channels
+   may imply additional configuration and operational complexity.
 
 ## IANA Considerations
 
