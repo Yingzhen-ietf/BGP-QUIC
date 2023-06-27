@@ -20,7 +20,7 @@ ordered stream of bytes. Moreover, each stream has its own flow
 control, which limits bytes sent on a stream, together with flow
 control of the connection.
 
-This document specifies the procedures for BGP to use QUIC as a transport protocol with a mechanism to carry Network Layer protocols (AFI/SAFI) over individual streams.  The Network layer protocols are identified using a combination of Address Family (AF) and Subsequent Address Family (SAFI), as described in <xref target="RFC4760"/>.  These per-AFI/SAFI streams (function channels) and the associated control mechanism (control channel) for the session are called "BGP channels". In one BGP over QUIC connection, one control channel and one or more function channels are used to carry routing information.
+This document specifies the procedures for BGP to use QUIC as a transport protocol with a mechanism to carry Network Layer protocols (AFI/SAFI) over individual streams.  The Network layer protocols are identified using a combination of Address Family (AF) and Subsequent Address Family (SAFI), as described in <xref target="RFC4760"/>.  These per-AFI/SAFI streams (function channels) and the associated control mechanism (control channel) for the session are called "BGP channels". In one BGP over QUIC (BoQ) connection, one control channel and one or more function channels are used to carry routing information.
 
 
 ## Summary of Operations
@@ -30,55 +30,48 @@ This document specifies the procedures for BGP to use QUIC as a transport protoc
 Before two BGP speakers start exchanging routing information, they must establish a BGP session. It is established in two phases:
 
  - Establish a transport layer connection. TLS 1.3 is integrated with QUIC. The TLS authentication parameters used for this connection are out of the scope of this draft. 
- - Establish a BGP over QUIC session over this transport connection. This document specifies the details of such an operation.
+ - Establish a BoQ session over this transport connection. This document specifies the details of such an operation.
 
 QUIC connections are established as described in [RFC9000].  During connection establishment, a BGP speaker SHOULD use UDP port TBD1 and MUST select the Application-Layer Protocol Negotiation (ALPN) [RFC7301] token "boq" in the TLS handshake.  Support for other application-layer protocols MUST NOT be offered in the same handshake. A connection MUST be closed if the ALPN token is not as indicated or if other application-layer protocols are offered in the same handshake.
 
 [RFC4271] defines the operations for a single BGP session between two BGP speakers using TCP.  This document defines the ability to carry BGP over multiple QUIC streams as "BGP channels".  
 
-On a BGP over QUIC connection, the BGP over QUIC speaker first establishes a bidirectional stream for the "BGP control channel".  The control channel is used to establish a BGP peer relationship between two BGP over QUIC speakers, similar to RFC 4271.  OPEN messages are exchanged on the control channel, and if the BGP over QUIC session parameters are acceptable, the peering session is established.  Similar to RFC 4271, if the parameters are unacceptable, the BGP over QUIC session is terminated with a NOTIFICATION message.
+On a BoQ connection, the BoQ speaker first establishes a bidirectional stream for the "BGP control channel".  The control channel is used to establish a BGP peer relationship between two BoQ speakers, similar to RFC 4271.  OPEN messages are exchanged on the control channel, and if the BoQ session parameters are acceptable, the peering session is established.  Similar to RFC 4271, the BoQ session is terminated with a NOTIFICATION message if the parameters are unacceptable.
 
-After establishing the control channel, each BGP over QUIC speaker may create function channels using unidirectional QUIC streams.  These function channels are used to carry BGP routes for a specific AFI/SAFI.  Only one one function channel per AFI/SAFI from one BGP over QUIC speaker to the other can exist (see "Channel Collision Avoidance"). Unlike RFC 4271 BGP, there is no requirement for both BGP over QUIC speakers to have a symmetric and matching set of function channels.
+After establishing the control channel, each BoQ speaker may create function channels using unidirectional QUIC streams.  These function channels are used to carry BGP routes for a specific AFI/SAFI.  Only one function channel per AFI/SAFI can exist from one BoQ speaker to the other (see "Channel Collision Avoidance"). Unlike RFC 4271 BGP, there is no requirement for both BoQ speakers to have a symmetric and matching set of function channels.
 
-BGP channels largely use the mechanisms of the RFC 4271 Finite State Machine (FSM) for their establishment. For the control channel carried over a bidirectional QUIC stream, the FSM is identical to the RFC 4271 FSM.  However, since the function channels are unidirectional, the RFC 4271 FSM procedures cannot be carried solely using the unidirectional channel from one BGP over QUIC speaker to another.  Instead, the responding BGP speaker must carry its replies for the unidirectional streams over the control channel and address them to a specific BGP function channel.
+BGP channels largely use the mechanisms of the RFC 4271 Finite State Machine (FSM) for their establishment. For the control channel carried over a bidirectional QUIC stream, the FSM is identical to the RFC 4271 FSM.  However, since the function channels are unidirectional, the RFC 4271 FSM procedures cannot be carried out solely using the unidirectional channel from one BoQ speaker to another.  Instead, the responding BGP speaker must carry its replies for the unidirectional streams over the control channel and address them to a specific BGP function channel.
 
 ### Establish BGP/QUIC Control Channel
 
-After BGP over QUIC session establishment, the BGP over QUIC speakers will create their control channel.  The control channel is a bidirectional QUIC stream.  It is created by sending a BGP OPEN message. BGP OPEN messages carry parameters such as the Autonomous System number, BGP Identifier (router-id), Hold Time, and Capabilities.  These parameters are used by a BGP speaker to decide whether a BGP session is permitted to be established.
+After BoQ session establishment, the BoQ speakers will create the control channel.  The control channel is a bidirectional QUIC stream.  It is created by sending a BGP OPEN message. BGP OPEN messages carry parameters such as the Autonomous System number, BGP Identifier (router-id), Hold Time, and Capabilities.  These parameters are used by a BGP speaker to decide whether a BGP session is permitted to be established.
 
-The capabilities carried in this OPEN message for the control channel are the BGP over QUIC connection specific parameters; i.e. those that apply to the entire connection.  An example of this is the BGP Role Capability <xref target="https://www.rfc-editor.org/rfc/rfc9234.html"/>. 
+The capabilities carried in this OPEN message for the control channel are the BoQ connection-specific parameters, i.e. those that apply to the entire connection.  An example of this is the BGP Role Capability <xref target="https://www.rfc-editor.org/rfc/rfc9234.html"/>.  If a function-only capability, as categorized in the "BGP Capability Category" table, is included in the OPEN message, it MUST be ignored.
 
-The control channel uses BGP holdtime procedures as specified in RFC 4271.  A Keepalive timer is used to periodically send KEEPALIVE messages in the absence of other messages on the control channel.  If no messages are received within the negotiated holdtime on the control channel, the BGP over QUIC connection is closed with a NOTIFICATION sent on the control channel.  In short, the BGP over QUIC control channel is used to establish the peering relationship and connection parameters between the two BGP speakers, ensure connectivity over this session is verified, and further is used as the response channel for the per-AFI/SAFI function channels as specified in the next section.
-
-If the parameters for the BGP over QUIC session carried on the control channel are acceptable, the control channel enters the Established state.  Afterwards the per-AFI/SAFI function channels can then be created. The BGP function channels carry the per-AFI/SAFI routing information in BGP Updates.  Per-AFI/SAFI capabilities only need to be carried on those function channels.
+The control channel uses BGP hold time procedures as specified in RFC 4271.  KEEPALIVE messages are sent periodically in the absence of other messages on the control channel.  If no messages are received within the negotiated hold time on the control channel, the BoQ connection is closed with a NOTIFICATION as specified in <xref target="RFC4760" section="6.5"/>.  In short, the BoQ control channel is used to establish the peering relationship and connection parameters between the two BGP speakers, ensure connectivity over this session is verified, and further is used as the response channel for the function channels as specified in <xref target="Establish BGP/QUIC Function Channel"/>.
 
 (TODO)
-QUIC supports connection migration, however only the client side can move.  The role of the QUIC endpoints is important.  For future extensibility, a new BoQ Capability indicates the configured role of the BGP speaker: Client, Server, or Any.  It is expected that the BGP configuration and QUIC roles match.  The QUIC connection can be reset if they don't.  See Section x for details.
+QUIC supports connection migration. However, only the client side can move.  The role of the QUIC endpoints is important.  For future extensibility, a new BoQ Capability indicates the configured role of the BGP speaker: Client, Server, or Any.  It is expected that the BGP configuration and QUIC roles match.  The QUIC connection can be reset if they don't.  See Section x for details.
 
 ### Establish BGP/QUIC Function Channel
 
-Per-AFI/SAFI Function channels are used to
-exchange routing information. After the control
-channel reaches Established state, function channels are created as
-unidirectional QUIC streams and advertise per-AFI/SAFI routes using BGP Update messages.  There SHALL NOT be more than one per-AFI/SAFI function channel for each BGP speaker; they are unique.
+Per-AFI/SAFI Function channels are used to exchange routing information. After the control channel reaches the Established state, function channels are created as unidirectional QUIC streams and advertise routes for a single AFI/SAFI using BGP UPDATE messages.  Only one function channel per AFI/SAFI can exist from one BoQ speaker to the other (see "Channel Collision Avoidance").
 
-BGP over QUIC speakers asymmetrically create their per-AFI/SAFI function channels.  While it might be the typical case for there to be a symmetric set of per-AFI/SAFI function channels, one for each speaker, this is not a requirement.  For example, BGP-LS <xref target="https://datatracker.ietf.org/doc/html/rfc7752"/> may only require that a BGP speaker asymmetrically receive BGP-LS NLRI, and may not need to send them.
+BoQ speakers asymmetrically create their function channels.  While it might be the typical case for there to be a symmetric set of per-AFI/SAFI function channels, one for each speaker, this is not a requirement.  For example, BGP-LS <xref target="https://datatracker.ietf.org/doc/html/rfc7752"/> may only require that a BGP speaker asymmetrically receive BGP-LS NLRI and may not need to send them.
 
 (XXX Alvaro)
-A BGP speaker that needs to advertise routes to its peer opens a
-unidirectional stream to its neighbor and sends an OPEN
-message indicating the particular AFI/SAFI to be used.  The BGP over QUIC connection-wide parameters have previously been exchanged over the control channel. The per-AFI/SAFI function channel OPEN messages MUST contain identical BGP Autonomous System number and BGP Identifier as the previously Established control channel.  It is RECOMMENDED that the BGP Holtime value exchanged in the per-AFI/SAFI function channels is significantly longer than the holdtime negotiated for the control channel.  It is the responsibility of the holdtimer for the control channel to provide connection verification for the BGP over QUIC connection.  The purpose of the per-AFI/SAFI function channel negotiated holdtime is to provide verification of communication between  the two BGP over QUIC speakers for that AFI/SAFI.
+A BoQ speaker that needs to advertise routes to its peer opens a unidirectional stream to its neighbor and sends an OPEN message indicating the particular AFI/SAFI to be used.  The BoQ connection-wide parameters have previously been exchanged over the control channel. The per-AFI/SAFI function channel OPEN messages MUST contain identical BGP Autonomous System number and BGP Identifier as the previously established control channel.  It is RECOMMENDED that the BGP Hold Time value exchanged in the function channels be significantly longer than the hold time negotiated for the control channel.  It is the responsibility of the hold timer for the control channel to provide connection verification for the BoQ connection.  The purpose of the function channel negotiated hold time is to provide verification of the communication between the two BoQ speakers for that AFI/SAFI.
 
-The BGP Capabilities carried on the per-AFI/SAFI channel SHOULD only be those that are per-AFI/SAFI specific.  Conflicting BGP over QUIC connection-wide parameters exchanged over the per-AFI/SAFI function channels MAY BE reason for the BGP speaker to send a NOTIFICATION message and not to permit the per-AFI/SAFI function channel to become Established. 
+The BGP Capabilities carried on the function channel SHOULD only be those that are function-specific, as categorized in the "BGP Capability Category" table.  Conflicting BoQ connection-wide parameters exchanged over the per-AFI/SAFI function channels MAY BE reason for the BGP speaker to send a NOTIFICATION message and not to permit the per-AFI/SAFI function channel to become Established. 
 
-The BGP over QUIC speaker creates the per-AFI/SAFI channel by sending its OPEN message over the newly created QUIC unidirectional stream.  The receiving BGP speaker replies to those messages as defined in the RFC 4271 FSM by sending its messages (OPEN/NOTIFICATION/KEEPALIVE) addressed to the sender over the control channel.
+The BoQ speaker creates the per-AFI/SAFI channel by sending its OPEN message over the newly created QUIC unidirectional stream.  The receiving BGP speaker replies to those messages as defined in the RFC 4271 FSM by sending its messages (OPEN/NOTIFICATION/KEEPALIVE) addressed to the sender over the control channel.
 
 (TODO - now is the point to discuss changes to BGP messages to support BGP Channels, including how do we address specific BGP PDUs to the receiver and is this in the QUIC frame or the BGP PDU)
 
 
 -----
 
-Once the per-AFI/SAFI function channel has reached the Established state, it may send BGP Update messages to the remote BGP over QUIC speaker.
+Once the per-AFI/SAFI function channel has reached the Established state, it may send BGP Update messages to the remote BoQ speaker.
 
 
 A single function channel for an AFI/SAFI pair results in asymmetric
