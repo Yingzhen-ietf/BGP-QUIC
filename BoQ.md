@@ -113,19 +113,24 @@ How to implement the supported priorities using QUIC congestion control at the c
 
 ### BGP Over QUIC Capability
 
-A new ”BGP over QUIC” capability in the OPEN message to signal the BoQ speaker is a QUIC client, a QUIC server or any (Don’t care). To be a client or server, it needs to be explicitly configured for a BoQ speaker, otherwise the default value is “any”.
+A new ”BGP over QUIC” capability is defined below to signal whether the BoQ speaker is a QUIC client, a QUIC server, or any (Don’t care). The default value is "any"; other values MUST be explicitly configured.
 
 BoQ capability:
-  Code: TBD (to be assigned by IANA)
+  Code: TBD2 (to be assigned by IANA)
   Length: 1(octet)
   Value:
     0 Any
     1 Client
     2 Server
 
-This ONLY applies to the control channel. If the BoQ capability is sent in OPEN message for any AFI/SAFI channel, it MUST be ignored. A BoQ speaker SHOULD support the explicit configuration of it as a client, a server or any. Before a control channel is created, a BoQ speaker SHOULD check whether its configuration matches the QUIC connection role. If they don't match, the QUIC connection SHOULD be terminated. For example, if a BoQ speaker is configured as a client, but the QUIC connection comes up as a QUIC server, the QUIC connection should be terminated.
+The BoQ Capability is a control-only capability (see the "BGP Capability Category" table).  It MUST be ignored if received in the OPEN message of any function channel. 
+
+A QUIC connection SHOULD be terminated (how?) if the BoQ speaker configuration and the QUIC connection role don't match. For example, if a BoQ speaker is configured as a client, but the QUIC connection comes up as a QUIC server, the QUIC connection should be terminated.  The "any" configuration matches both the QUIC client and QUIC server roles.
 
 If a BoQ speaker is configured as QUIC client, it SHOULD try to initiate the QUIC connection. If a BoQ speaker is configured as QUIC server, it SHOULD wait for a QUIC connection.
+
+(**) There are too many SHOULDs here, and I think a bit of a logic loop.  Should the BoQ and QUIC roles be compared before or after?  If the roles are considered when starting the connection, then there shouldn't be a mismatch later -- but these are only recommendations.  If a server, why would the router wait forever?
+
 When both BGP peers are explicitly configured (one side as client and the other side as server), no collision will happen.
 When both BGP peers are “any”, existing session collision mechanism are used.
 When both BGP peers are explicitly configured as client (configuration error), a new OPEN message error subcode (BoQ error) MUST be sent.
@@ -300,7 +305,7 @@ BGP [RFC4271] in the "TLS Application-Layer Protocol Negotiation
     +=======+========================+===========+===================+
     | Value | Description            | Reference | Change Controller |
     +=======+========================+===========+===================+
-    | TBD1  | BoQ Capability         | [This     | IETF              |
+    | TBD2  | BoQ Capability         | [This     | IETF              |
     |       |                        | Document] |                   |
     +-------+------------------------+-----------+-------------------+
 
