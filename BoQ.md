@@ -61,7 +61,7 @@ BoQ speakers asymmetrically create their function channels.  While it might be t
 
 A BoQ speaker that needs to advertise routes to its peer opens a unidirectional stream to its neighbor and sends an OPEN message indicating the particular AFI/SAFI to be used.  The BoQ connection-wide parameters have previously been exchanged over the control channel. The function channel OPEN messages MUST contain identical BGP Autonomous System number and BGP Identifier as the previously established control channel.  It is RECOMMENDED that the BGP Hold Time value exchanged in the function channels be significantly longer than the hold time negotiated for the control channel.  It is the responsibility of the hold timer for the control channel to provide connection verification for the BoQ connection.  The purpose of the function channel negotiated hold time is to provide verification of the communication between the two BoQ speakers for that AFI/SAFI.
 
-(TODO) Errors for mismatched ASN and ID.
+(TODO) Errors for mismatched ASN and ID -> use existing errors.
 
 The BGP Capabilities carried on the function channel SHOULD only be those that are function-specific, as categorized in the "BGP Capability Category" table.  Conflicting BoQ connection-wide parameters exchanged over the function channel MAY result in the BoQ speaker sending a NOTIFICATION message and not permitting the per-AFI/SAFI function channel to become Established. 
 
@@ -130,6 +130,8 @@ A QUIC connection SHOULD be terminated (how?) if the BoQ speaker configuration a
 If a BoQ speaker is configured as QUIC client, it SHOULD try to initiate the QUIC connection. If a BoQ speaker is configured as QUIC server, it SHOULD wait for a QUIC connection.
 
 (**) There are too many SHOULDs here, and I think a bit of a logic loop.  Should the BoQ and QUIC roles be compared before or after?  If the roles are considered when starting the connection, then there shouldn't be a mismatch later -- but these are only recommendations.  If a server, why would the router wait forever?
+
+(**) QUIC should inherit the BGP configuration.  Need to update the connection collision mechanism.
 
 When both BGP peers are explicitly configured (one side as client and the other side as server), no collision will happen.
 When both BGP peers are “any”, existing session collision mechanism are used.
