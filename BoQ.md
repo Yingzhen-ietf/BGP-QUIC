@@ -191,16 +191,69 @@ Unless allowed via configuration, a channel collision with an existing BGP chann
 
 ### Message Format
 
-- OPEN Message
+In version 1 of QUIC, BoQ messages are carried by QUIC STREAM frames. In BoQ, the control channel always uses QUIC stream 0, which is a client-initiated bidirectional stream.
+
+For function channels, which are unidirectional streams, can be client or server initiated.
+
+Some BoQ messages, although sent in the control channel, are meant for a function channel, such as the responding OPEN message or KEEPALIVE message for a function channel. These messages need to carry the corresponing channel/stream ID information. 
+
+#### BoQ Framing Layer
+
+There are two types of BoQ Frames: Data and Control Data.
+
+Data Frames have the following format:
+```yml
+---
+BoQ Frame Format {
+  Type (0),
+  Length (),
+  Frame Payload (...)
+}
+---
+```
+Control Data Frames have the following format:
+```yml
+---
+BoQ Frame Format {
+  Type (1),
+  Length (),
+  Stream ID (),
+  Frame Payload (...)
+}
+---
+```
+Type: One octcet, it identifies the frame type.
+Length: The two-byte unsigned integer that describes the length in bytes of the frame payload.
+Stream ID: A Variable-length integer indicating the receiving stream ID of this message.
+Frame Payload: BGP messages.
+```md
++===============+=================+==================+
+|               | Control Channel | Function Channel |
++===============+=================+==================+
+| OPEN          | Control Data    |       Data       |
++---------------+-----------------+------------------+
+| UPDATE        |                 |       Data       |            
++---------------+-----------------+------------------+
+| KEEPALIVE     | Control Data    |       Data       |
++---------------+-----------------+------------------+
+| NOTFICATION   | Control Data    |       Data       |
++---------------+-----------------+------------------+
+| Route-Refresh |                 |                  |
++-------+------------------------+---------------- --+
+```
+
+- OPEN
 OPEN message sent in the control channel for the control channel creation MUST NOT contain Multiprotocl Extensions Capability (value 1) in the Capabilites.
 OPEN message sent in a function channel and the responding OPEN message sent in the control channel for one AFI/SAFI MUST contain only one Multiprotocl Extensions Capability (value 1) in the Capabilites. 
-- KEEPALIVE
-**(TODO)
-For the keepalive messages sent in the control channel for one AFI/SAFI, the AFI/SAFI info should be indicatd somehow. 
-BGP level: change the message format and add the AFI/SAFI info.
-QUIC level: for all packets sent in the control channel, add the AFI/SAFI info. 
-- NOTIFICATION 
-** same as above.
+
+- UPDATE
+There is no UPDATE message sent in the control channel. 
+
+- KEEPALIVE and NOTIFICATION
+For the keepalive and NOTIFICATION messages sent in the control channel for one function channel, the BoQ Control Data frame MUST be used, and the stream ID in the frame is to indiate the the target AFI/SAFI.
+
+- Route-Refresh
+Route-refresh messages are sent in the control channel using BoQ Control Data Frame.
 
 ## Error Handling
 * channel connection error: 
