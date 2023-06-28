@@ -184,6 +184,7 @@ If a BoQ speaker receives a function channel creation request for an AFI/SAFI th
 If a BoQ speaker receives a functional channel creation request for an AFI/SAFI that it doesn't support, the local BoQ speaker SHOULD send a notification with Erro Code Cease and Subcode BOQ_CHANNEL_NOSUPPORT through the control channel.
 
 (**) This error is a normal AFI/SAFI mismatch, and the normal error should be used.  BTW, which one is that?
+"Unsupported AFI/SAFI" or "Unsupported Attribute" (error code 3) in the Open Message Error NOTIFICATION message 
 
 Unless allowed via configuration, a channel collision with an existing BGP channel in the Established state causes the closing of the newly created channel.
 
