@@ -175,13 +175,19 @@ Table: BGP Capability Category.
 
 ### Channel Collision Avoidance
 
-Before creating a new channel, a BoQ speaker should check that no channel exists for the same Network Layer protcol. If a channel already exists, the BoQ speaker SHOULD NOT attemp to create a new one.
+A function channel for a specific Network layer protocol MUST NOT be created if one already exists.
 
 If a BoQ speaker receives a function channel creation request for an AFI/SAFI that already exists, the local BoQ speaker SHOULD send a notification with Error Code Sease and subcode BOQ_CHANNEL_CONFLICT through the control channel. (or OPEN Message Error Subcode???? in this case, not only the AFI/SAFI info needed, the stream ID is also needed)
 
+(**) This error is specific to using multiple channels in QUIC; it wouldn't apply to multiple TCP sessions.  IMO, we should create a new error code (BoQ) with the corresponding sub-codes for problems that are BoQ-specific.
+
 If a BoQ speaker receives a functional channel creation request for an AFI/SAFI that it doesn't support, the local BoQ speaker SHOULD send a notification with Erro Code Cease and Subcode BOQ_CHANNEL_NOSUPPORT through the control channel.
 
+(**) This error is a normal AFI/SAFI mismatch, and the normal error should be used.  BTW, which one is that?
+
 Unless allowed via configuration, a channel collision with an existing BGP channel in the Established state causes the closing of the newly created channel.
+
+(**) I think we may have put this here for the graceful restart case...
 
 ### Message Format
 
