@@ -200,7 +200,7 @@
 
       <section anchor="BoQ Function Channel" title="Establish BGP/QUIC Function Channel">
         <t>
-          Per-AFI/SAFI Function channels are used to exchange routing information. After the control channel reaches the Established state, function channels are created as unidirectional QUIC streams and advertise routes for a single AFI/SAFI using BGP UPDATE messages.  Only one function channel per AFI/SAFI can exist from one BoQ speaker to another (see "Channel Collision Avoidance").</t>
+          Per-AFI/SAFI Function channels are used to exchange routing information. After the control channel reaches the Established state, function channels are created as unidirectional QUIC streams and advertise routes for a single AFI/SAFI using BGP UPDATE messages.  Only one function channel per AFI/SAFI can exist from one BoQ speaker to another (see <xref target="channel collistion"/>).</t>
         <t>
           BoQ speakers asymmetrically create their function channels.  While it might be the typical case for there to be a symmetric set of per-AFI/SAFI function channels, one for each speaker, this is not a requirement.  For example, BGP-LS <xref target="RFC7752"/> may only require that a BoQ speaker asymmetrically receive BGP-LS NLRI and may not need to send them.</t>
         <t>
@@ -214,12 +214,12 @@
         <t>
           A single function channel for an AFI/SAFI pair results in asymmetric route advertisements.  Both BoQ speakers can create a function channel to implement symmetric route advertisements.</t>
         <t>
-          Each function channel is created independently to naturally support multi-channel BGP. The neighbor state machines are decoupled; in case of error, it is possible to reset only one function channel (one direction of a symmetric route exchange). If one function channel is blocked for some reason, other channels can still progress and operate.</t>
+          Each function channel is created independently to naturally support multi-channel BGP. The neighbor state machines are decoupled; in case of error, it is possible to reset only one function channel (one direction of a symmetric route exchange) using BoQ Error Message with code BoQ Chanel Reset <xref target="notifications"/>. If one function channel is blocked for some reason, other channels can still progress and operate.</t>
       </section>
 
       <section title="Channel Reset">
         <t>
-          A NOTIFICATION is sent over the control channel if the entire BGP connection needs to be reset for any reason, such as a configuration change or a network outage.</t>
+          A NOTIFICATION is sent over the control channel if the entire BGP connection needs to be reset for any reason, such as a configuration change or a network outage. Existing error messages defined by <xref target="RFC4271"/> SHOULD be used.</t>
         <t>
           If the control channel is closed, the QUIC connection MUST be terminated using a CONNECTION_CLOSE frame, and an error notification <xref target="notifications"/>. should be included to indicate that the connection has been terminated by BGP. If there are other open channels, they are also closed when the connection is closed.</t>
         <t>
@@ -274,7 +274,7 @@
         <t>
           During the control channel setup, the BoQ capability MUST be checked to make sure the configured BoQ role matches the QUIC connection. When both BoQ peers are configured as "any", existing session collision mechanism defined in <xref target="RFC6286"/> and <xref target="RFC4271"/> MUST be followed.</t>
         <t>
-          In case there is a BoQ role mismatch, for example, a BoQ speaker configured as any accepted a QUIC connection from a BoQ speaker configures as server, an error notification SHOULD be sent and the connection MUST be terminated. Please refer to <xref target="notifications"/> for detail.</t>      
+          In case there is a BoQ role mismatch, for example, a BoQ speaker configured as any accepted a QUIC connection from a BoQ speaker configures as server, an error notification, BGP Capability Mismatch, SHOULD be sent and the connection MUST be terminated. Please refer to <xref target="notifications"/> for detail.</t>      
       </section>
 
       <section title="Capability Category">
@@ -315,11 +315,11 @@
         </artwork>
       </section>
 
-      <section title="Channel Collision Avoidance">
+      <section anchor="channel collistion" title="Channel Collision Avoidance">
         <t>
           A function channel for a specific Network layer protocol MUST NOT be created if one already exists.</t>
         <t>
-          If a BoQ speaker receives a function channel creation request for an AFI/SAFI that already exists, the local BoQ speaker SHOULD send a notification with Error Code BoQ and subcode BOQ_CHANNEL_CONFLICT through the control channel, and upon receiving this notification the channel initiator MUST terminates the channel. </t>
+          If a BoQ speaker receives a function channel creation request for an AFI/SAFI that already exists, the local BoQ speaker SHOULD send a notification with Error Code BoQ and subcode BoQ Channel Conflict through the control channel, and upon receiving this notification the channel initiator MUST terminates the channel. </t>
         <t>
           If a BoQ speaker receives a functional channel creation request for an AFI/SAFI that it doesn't support, the local BoQ speaker SHOULD send a notification using existing subcode "Unsupported AFI/SAFI" in the OPEN Message Error NOTIFICATIN message.</t>
         <t>
@@ -345,7 +345,7 @@
         <t>
           Control Data Frames have the following format:</t>
         <artwork>
-    BoQ Frame Format {
+    BoQ Control Data Frame Format {
       Type (1),
       Length (),
       Stream ID (),
@@ -403,6 +403,9 @@
       3          BoQ Channel Reset
       4          BoQ Channel Conflict
       </artwork>
+      <t>
+        BoQ Capability Mismatch is sent when a BoQ speaker's configured role doesn't match the QUIC connection, and the connection MUST be terminated after sending this notification. Details are described in <xref target="BoQ Capability"/></t>
+
       <t>
         The error handling specified in this section is applicable for a BoQ speaker implementing this document.</t>
       <t>
