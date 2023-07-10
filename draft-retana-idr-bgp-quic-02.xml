@@ -1,23 +1,5 @@
 <?xml version='1.0'?>
-    <!DOCTYPE rfc SYSTEM 'rfc2629.dtd' [
-        <!ENTITY rfc2119 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.2119.xml'>
-        <!ENTITY rfc4271 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4271.xml'>
-        <!ENTITY rfc4272 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4272.xml'>
-        <!ENTITY rfc4486 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4486.xml'>
-        <!ENTITY rfc4760 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.4760.xml'>
-        <!ENTITY rfc5492 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.5492.xml'>
-        <!ENTITY rfc6286 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.6286.xml'>
-        <!ENTITY rfc7301 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.7301.xml'>
-        <!ENTITY rfc7454 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.7454.xml'>
-        <!ENTITY rfc7752 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.7752.xml'>
-        <!ENTITY rfc8174 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.8174.xml'>
-        <!ENTITY rfc9000 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9000.xml'>
-        <!ENTITY rfc9234 PUBLIC '' 'http://xml.resource.org/public/rfc/bibxml/reference.RFC.9234.xml'>
-        <!ENTITY I-D.chen-idr-bgp-over-quic PUBLIC ''
-      'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-chen-idr-bgp-over-quic-00.xml'>
-        <!ENTITY I-D.ietf-idr-bgp-multisession PUBLIC ''
-      'http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-idr-bgp-multisession-07.xml'>
-        ]>
+
 <?rfc toc="yes"?>
 <?rfc tocompact="no"?>
 <?rfc tocdepth="6"?>
@@ -26,7 +8,13 @@
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
 <?rfc strict="yes" ?>
-<rfc category="std" ipr="trust200902" docName="draft-retana-idr-bgp-quic-02">
+<rfc 
+  xmlns:xi="http://www.w3.org/2001/XInclude" 
+  category="std" 
+  submissionType="IETF" 
+  ipr="trust200902" 
+  docName="draft-retana-idr-bgp-quic-02" 
+  consensus="true">
   <!-- ***** FRONT MATTER ***** -->
   <front>
     <title abbrev="BGP over QUIC Streams">BGP over QUIC</title>
@@ -191,7 +179,7 @@
         <t>
           After BoQ session establishment, the BoQ speakers will create the control channel.  The control channel is a bidirectional QUIC stream with stream ID 0 <xref target="RFC9000"/>.  It is created by sending a BGP OPEN message. BGP OPEN messages carry parameters such as the Autonomous System number, BGP Identifier (router-id), Hold Time, and Capabilities.  These parameters are used by a BoQ speaker to decide whether a BGP session is permitted to be established.</t>
         <t>
-          The capabilities carried in this OPEN message for the control channel are the BoQ connection-specific parameters; i.e. those that apply to the entire connection.  An example of this is the BGP Role Capability <xref target="RFC9234"/>.  If a function-only capability - as categorized in the "BGP Capability Category" table - is included in the OPEN message, it MUST be ignored.</t>
+          The capabilities carried in this OPEN message for the control channel are the BoQ connection-specific parameters; i.e. those that apply to the entire connection.  An example of this is the BGP Role Capability <xref target="RFC9234"/>.  If a function-only capability - as categorized in <xref target="CapabilityCategory"/> - is included in the OPEN message, it MUST be ignored.</t>
         <t>
           The control channel uses BGP hold time procedures as specified in <xref target="RFC4271"/>.  KEEPALIVE messages are sent periodically in the absence of other messages on the control channel.  If no messages are received within the negotiated hold time on the control channel, the BoQ connection is closed with a NOTIFICATION as specified in <xref target="RFC4271" section="6.5"/>.  In short, the BoQ control channel is used to establish the peering relationship and connection parameters between the two BoQ speakers, ensure connectivity over this session is verified, and further is used as the response channel for the function channels as specified in <xref target="BoQ Function Channel"/>.</t>
         <t>
@@ -206,11 +194,11 @@
         <t>
           It is an error to try to establish Per-AFI/SAFI Function channels prior to the control channel transitioning to the Established state.  Per-AFI/SAFI Function channels SHOULD NOT be permitted to transition to the Established state prior to the control channel itself entering the Established state.</t>
         <t>
-          BoQ speakers asymmetrically create their function channels.  While it might be the typical case for there to be a symmetric set of per-AFI/SAFI function channels, one for each speaker, this is not a requirement.  For example, BGP-LS <xref target="RFC7752"/> may only require that a BoQ speaker asymmetrically receive BGP-LS NLRI and may not need to send them.</t>
+          BoQ speakers asymmetrically create their function channels.  While it might be the typical case for there to be a symmetric set of per-AFI/SAFI function channels, one for each speaker, this is not a requirement.  For example, BGP-LS <xref target="I-D.ietf-idr-rfc7752bis"/> may only require that a BoQ speaker asymmetrically receive BGP-LS NLRI and may not need to send them.</t>
         <t>
           A BoQ speaker that needs to advertise routes to its peer opens a unidirectional stream to its neighbor by sending an OPEN message indicating the particular AFI/SAFI to be used.  The BoQ connection-wide parameters have previously been exchanged over the control channel. The function channel OPEN messages MUST contain identical BGP Autonomous System number and BGP Identifier as the previously established control channel.  It is RECOMMENDED that the BGP Hold Time value exchanged in the function channels be significantly longer than the hold time negotiated for the control channel.  It is the responsibility of the hold timer for the control channel to provide connection verification for the BoQ connection.  The purpose of the function channel negotiated hold time is to provide verification of the communication between the two BoQ speakers for that AFI/SAFI.</t>
         <t>
-          The BGP Capabilities carried on the function channel SHOULD only be those that are function-specific, as categorized in the "BGP Capability Category" table.  Conflicting BoQ connection-wide parameters exchanged over the function channel MAY result in the BoQ speaker sending a NOTIFICATION message and not permitting the per-AFI/SAFI function channel to become Established. </t>
+          The BGP Capabilities carried on the function channel SHOULD only be those that are function-specific, as categorized in <xref target="CapabilityCategory"/>.  Conflicting BoQ connection-wide parameters exchanged over the function channel MAY result in the BoQ speaker sending a NOTIFICATION message and not permitting the per-AFI/SAFI function channel to become Established. </t>
         <t>
           The receiving BoQ speaker replies to those messages as defined in the <xref target="RFC4271"/> FSM by sending its messages (OPEN/NOTIFICATION/KEEPALIVE) addressed to the sender over the control channel.</t>
         <t>
@@ -264,7 +252,7 @@
         </artwork>
   
         <t>
-          The BoQ Capability is a control-only capability (see the "BGP Capability Category" table), which means it SHOULD only be sent in the control channel. It MUST be ignored if received in the OPEN message of any function channel.</t>
+          The BoQ Capability is a control-only capability (see <xref target="CapabilityCategory"/>), which means it SHOULD only be sent in the control channel. It MUST be ignored if received in the OPEN message of any function channel.</t>
         <t>
           A BoQ session MUST be terminated if the BoQ speaker role configuration and the QUIC connection role doesn't match by sending a NOTIFICATION on the control channel with an error code of BGP over QUIC Message Error and a Subcode BoQ Capability Mismatch, the close the QUIC onnection with a CONNECTION_CLOSE frame with an error code of APPLICATION_ERROR. Please refer to section 19.19 in <xref target="RFC9000"/> . For example, if a BoQ speaker is configured as a client, but the QUIC connection comes up as a QUIC server, the QUIC connection must be terminated. The "any" configuration matches both the QUIC client and QUIC server roles.</t>
         <t>
@@ -285,7 +273,7 @@
         <t>
           For existing BGP capabilities, some of of them apply to the entire connection and MUST be sent in the control channel OPEN message, such as the BGP Role defined in <xref target="RFC9234"/>. If such capabilities are sent in an OPEN message in a function channel, they MUST be ignored.</t>
         <t>The following table shows the category of each capability.</t>
-        <table>
+        <table anchor="CapabilityCategory">
           <name>Capability Category Table</name>
           <thead>
             <tr>
@@ -600,7 +588,7 @@
         to QUIC.  It does not modify the basic protocol specifications of
         BGP, and therefore does not introduce new security risks to the basic
         BGP protocol.  The non-TCP-related considerations of <xref target="RFC4271"/>,
-        <xref target="RFC4272"/>, and <xref target="RFC7454"/>[RFC7454] apply to the specification in this document.</t>
+        <xref target="RFC4272"/>, and <xref target="RFC7454"/> apply to the specification in this document.</t>
 
       <t>
         BoQ enhances transport-layer security for BGP sessions, refer to <xref target="RFC7454"/>:
@@ -703,16 +691,51 @@
       Reference: this document
       Registration Procedure(s): Values 0-127 Standards Action,
         values 128-255 First Come First Served
-
-      Value   Name                       Reference
-        0     Reserved                   this document
-        1     BoQ Capability Mismatch    this document
-        2     BoQ Connection Reset       this document
-        3     BoQ Channel Reset          this document
-        4     BoQ Channel Conflict       this document
-       5-255  Unassigned
-
         </artwork>
+
+      <table anchor="ErrorSubcodes">
+       <name>BGP over QUIC Message Error subcodes</name>
+       <thead>
+         <tr>
+           <th align="center" colspan="1" rowspan="1">Value</th>
+           <th align="center" colspan="1" rowspan="1">Name</th>
+           <th align="center" colspan="1" rowspan="1">Reference</th>
+         </tr>
+       </thead>
+       <tbody>
+         <tr>
+           <td align="center" colspan="1" rowspan="1">0</td>
+           <td align="left" colspan="1" rowspan="1">Reserved</td>
+           <td align="left" colspan="1" rowspan="1">[this document]</td>
+         </tr>
+        <tr>
+           <td align="center" colspan="1" rowspan="1">1</td>
+           <td align="left" colspan="1" rowspan="1">BoQ Capability Mismatch</td>
+           <td align="left" colspan="1" rowspan="1">[this document]</td>
+         </tr>
+                  <tr>
+           <td align="center" colspan="1" rowspan="1">2</td>
+           <td align="left" colspan="1" rowspan="1">BoQ Connection Reset</td>
+           <td align="left" colspan="1" rowspan="1">[this document]</td>
+         </tr>
+                  <tr>
+           <td align="center" colspan="1" rowspan="1">3</td>
+           <td align="left" colspan="1" rowspan="1">BoQ Channel Reset</td>
+           <td align="left" colspan="1" rowspan="1">[this document]</td>
+         </tr>
+                  <tr>
+           <td align="center" colspan="1" rowspan="1">4</td>
+           <td align="left" colspan="1" rowspan="1">BoQ Channel Conflict</td>
+           <td align="left" colspan="1" rowspan="1">[this document]</td>
+         </tr>
+                  <tr>
+           <td align="center" colspan="1" rowspan="1">5-255</td>
+           <td align="left" colspan="1" rowspan="1">Unassigned</td>
+           <td align="left" colspan="1" rowspan="1"></td>
+         </tr>
+      </tbody>
+     </table>
+
 
       </section>
     </section>
@@ -732,23 +755,22 @@
 
 <back>
     <references title="Normative References">
-        &rfc2119;
-        &rfc4271;
-        &rfc4486;
-        &rfc5492;
-        &rfc6286;
-        &rfc7301;
-        &rfc8174;
-        &rfc9000;
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.2119.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4271.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4486.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.5492.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.6286.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.7301.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.8174.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.9000.xml"/>
     </references>
     <references title="Informative References">
-        &I-D.chen-idr-bgp-over-quic;
-        &I-D.ietf-idr-bgp-multisession;
-        &rfc4272;
-        &rfc4760;
-        &rfc7454;
-        &rfc7752;
-        &rfc9234;
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml3/reference.I-D.ietf-idr-bgp-multisession.xml"/>
+    <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-idr-rfc7752bis.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4272.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4760.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.7454.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.9234.xml"/>
     </references>
 
 </back>
