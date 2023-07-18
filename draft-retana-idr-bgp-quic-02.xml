@@ -261,7 +261,7 @@
           The following collision avoidance procedure SHOULD be followed during QUIC connection setup:
           <list style="empty">
             <t>When one BoQ speaker is configured as a client, and the other side is configured as a server, no collision will happen. If the other side initiates a QUIC connection, a QUIC CONNECTION_CLOSE frame with error code APPLICATION_ERROR MUST be sent.</t>          
-            <t>When a BoQ speaker is configured as "any" or a server, it MUST accept the QUIC connection initiated by the other BoQ speaker.</t>
+            <t>When a BoQ speaker is configured as "any" or as a server, it MUST accept the QUIC connection initiated by the other BoQ speaker.</t>
           </list></t>
         <t>
           During the control channel setup, the BoQ capability MUST be checked to make sure the configured BoQ role matches the QUIC connection. When both BoQ peers are configured as "any", the session collision mechanism defined in <xref target="RFC6286"/> and <xref target="RFC4271"/> MUST be followed.</t>
