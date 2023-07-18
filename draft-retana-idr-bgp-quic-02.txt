@@ -1,0 +1,1120 @@
+
+
+
+
+IDR Workgroup                                                  A. Retana
+Internet-Draft                                                     Y. Qu
+Intended status: Standards Track                  Futurewei Technologies
+Expires: 19 January 2024                                         J. Haas
+                                                        Juniper Networks
+                                                                 S. Chen
+                                                     Huawei Technologies
+                                                             J. Tantsura
+                                                                  Nvidia
+                                                            18 July 2023
+
+
+                             BGP over QUIC
+                      draft-retana-idr-bgp-quic-02
+
+Abstract
+
+   This document specifies the use of QUIC Streams to support multiple
+   BGP sessions over one connection in order to achieve high resiliency.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 19 January 2024.
+
+Copyright Notice
+
+   Copyright (c) 2023 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 1]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+   2.  Requirements Language . . . . . . . . . . . . . . . . . . . .   3
+   3.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .   3
+   4.  Summary of Operations . . . . . . . . . . . . . . . . . . . .   4
+     4.1.  Establish BGP/QUIC Connection . . . . . . . . . . . . . .   4
+     4.2.  Establish BGP/QUIC Control Channel  . . . . . . . . . . .   5
+     4.3.  Establish BGP/QUIC Function Channel . . . . . . . . . . .   6
+     4.4.  Channel Reset . . . . . . . . . . . . . . . . . . . . . .   7
+     4.5.  Channel Coordination  . . . . . . . . . . . . . . . . . .   8
+   5.  Protocol Definitions  . . . . . . . . . . . . . . . . . . . .   8
+     5.1.  BGP Over QUIC Capability  . . . . . . . . . . . . . . . .   8
+     5.2.  Capability Category . . . . . . . . . . . . . . . . . . .  10
+     5.3.  Channel Collision Avoidance . . . . . . . . . . . . . . .  11
+     5.4.  BoQ Framing Layer . . . . . . . . . . . . . . . . . . . .  12
+   6.  Error Handling  . . . . . . . . . . . . . . . . . . . . . . .  13
+   7.  Modifications to FSM  . . . . . . . . . . . . . . . . . . . .  14
+   8.  Operational Considerations  . . . . . . . . . . . . . . . . .  14
+     8.1.  Using Multi-Channel BGP over QUIC . . . . . . . . . . . .  14
+     8.2.  BGP Multi-Channel Prioritization  . . . . . . . . . . . .  14
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  15
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  15
+     10.1.  UDP Port for BoQ . . . . . . . . . . . . . . . . . . . .  15
+     10.2.  Registration of the BGP4 Identification String . . . . .  16
+     10.3.  BGP Over QUIC Capability . . . . . . . . . . . . . . . .  16
+     10.4.  Error Code . . . . . . . . . . . . . . . . . . . . . . .  17
+   11. Acknowledgement . . . . . . . . . . . . . . . . . . . . . . .  18
+   12. References  . . . . . . . . . . . . . . . . . . . . . . . . .  18
+     12.1.  Normative References . . . . . . . . . . . . . . . . . .  18
+     12.2.  Informative References . . . . . . . . . . . . . . . . .  19
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  19
+
+
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 2]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+1.  Introduction
+
+   The Border Gateway Protocol (BGP) [RFC4271] is the routing protocol
+   used to exchange routing and reachability information among
+   autonomous systems.  BGP uses TCP as its transport protocol to
+   provide reliable communication.  BGP establishes peer relationships
+   between routers using a TCP session on port 179.
+
+   The Multiprotocol Extensions for BGP-4 (MP-BGP) [RFC4760] allow BGP
+   to carry information for multiple Network Layer protocols.  However,
+   only a single TCP connection can reach the Established state between
+   a pair of peers [RFC4271].  As a consequence, an error related to a
+   particular Network Layer protocol may result in the termination of
+   the connection for all.
+
+   QUIC [RFC9000] is a UDP-based multiplexed and secure transport
+   protocol that provides connection-oriented and stateful interaction
+   between a client and server.  It can provide low latency and
+   encrypted transport with resilient connections.
+
+   In QUIC, application protocols exchange information using streams.
+   Each stream is a separate unidirectional or bidirectional channel
+   consisting of an ordered stream of bytes.  Moreover, each stream has
+   its own flow control, which limits bytes sent on a stream, together
+   with flow control of the connection.
+
+   This document specifies the procedures for BGP to use QUIC as a
+   transport protocol with a mechanism to carry Network Layer protocols
+   (AFI/SAFI) over individual streams.  The Network Layer protocols are
+   identified using a combination of Address Family (AFI) and Subsequent
+   Address Family (SAFI), as described in [RFC4760].  These per-AFI/SAFI
+   streams (function channels) and the associated control mechanism
+   (control channel) for the session are called "BGP channels".  In one
+   BGP over QUIC (BoQ) connection, one control channel and one or more
+   function channels are used to carry routing information.
+
+2.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+3.  Terminology
+
+      BoQ, Multi-channel BGP using QUIC: Running the BGP protocol over
+      multiple QUIC streams as defined in this document.
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 3]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+      QUIC connection: A transport-layer connection between two
+      endpoints using QUIC [RFC9000].
+
+      QUIC streams: A bidirectional or unidirectional bytestream
+      provided by the QUIC transport [RFC9000].
+
+      BGP channel: An instance of a BGP protocol state machine mapped to
+      a specific QUIC stream.
+
+      BGP control channel: A channel dedicated to transmitting the
+      session control data, which is implemented as a bidirectional
+      stream.
+
+      BGP function channel: A BGP per AFI/SAFI channel, which is
+      implemented asymmetrically as unidirectional streams.
+
+4.  Summary of Operations
+
+4.1.  Establish BGP/QUIC Connection
+
+   Before two BoQ speakers start exchanging routing information, they
+   must establish a BGP session.  It is established in two phases:
+
+   *  Establish a transport layer connection.  TLS 1.3 is integrated
+      with QUIC.  The TLS authentication parameters used for this
+      connection are out of the scope of this draft.
+
+   *  Establish a BoQ session over this transport connection.  This
+      document specifies the details of such an operation.
+
+   QUIC connections are established as described in [RFC9000].  During
+   connection establishment, a BoQ speaker SHOULD use UDP port TBD1 and
+   MUST select the Application-Layer Protocol Negotiation (ALPN)
+   [RFC7301] token "boq" in the TLS handshake.  Support for other
+   application-layer protocols MUST NOT be offered in the same
+   handshake.  A connection MUST be closed if the ALPN token is not as
+   indicated or if other application-layer protocols are offered in the
+   same handshake.
+
+   [RFC4271] defines the operations for a single BGP session between two
+   BGP speakers using TCP.  This document defines the ability to carry
+   BGP over multiple QUIC streams as "BGP channels".
+
+   On a BoQ connection, the BoQ speaker first establishes a
+   bidirectional stream for the "BGP control channel".  The control
+   channel is used to establish a BGP peer relationship between two BoQ
+   speakers, similar to RFC 4271.  OPEN messages are exchanged on the
+   control channel, and if the BoQ session parameters are acceptable,
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 4]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   the peering session is established.  Similar to RFC 4271, the BoQ
+   session is terminated with a NOTIFICATION message if the parameters
+   are unacceptable.
+
+   After establishing the control channel, each BoQ speaker may create
+   function channels using unidirectional QUIC streams.  These function
+   channels are used to carry BGP routes for a specific AFI/SAFI.  Only
+   one function channel per AFI/SAFI can exist from one BoQ speaker to
+   another (see "Channel Collision Avoidance").  Unlike [RFC4271] BGP,
+   there is no requirement for both BoQ speakers to have a symmetric and
+   matching set of function channels.
+
+   BGP channels largely use the mechanisms of the RFC 4271 Finite State
+   Machine (FSM) for their establishment.  For the control channel
+   carried over a bidirectional QUIC stream, the FSM is identical to the
+   RFC 4271 FSM.  However, since the function channels are
+   unidirectional, the RFC 4271 FSM procedures cannot be carried out
+   solely using the unidirectional channel from one BoQ speaker to
+   another.  Instead, the responding BoQ speaker must carry its replies
+   for the unidirectional streams over the control channel and address
+   them to a specific BGP function channel.
+
+4.2.  Establish BGP/QUIC Control Channel
+
+   After BoQ session establishment, the BoQ speakers will create the
+   control channel.  The control channel is a bidirectional QUIC stream
+   with stream ID 0 [RFC9000].  It is created by sending a BGP OPEN
+   message.  BGP OPEN messages carry parameters such as the Autonomous
+   System number, BGP Identifier (router-id), Hold Time, and
+   Capabilities.  These parameters are used by a BoQ speaker to decide
+   whether a BGP session is permitted to be established.
+
+   The capabilities carried in this OPEN message for the control channel
+   are the BoQ connection-specific parameters; i.e. those that apply to
+   the entire connection.  An example of this is the BGP Role Capability
+   [RFC9234].  If a function-only capability - as categorized in Table 1
+   - is included in the OPEN message, it MUST be ignored.
+
+   The control channel uses BGP hold time procedures as specified in
+   [RFC4271].  KEEPALIVE messages are sent periodically in the absence
+   of other messages on the control channel.  If no messages are
+   received within the negotiated hold time on the control channel, the
+   BoQ connection is closed with a NOTIFICATION as specified in
+   Section 6.5 of [RFC4271].  In short, the BoQ control channel is used
+   to establish the peering relationship and connection parameters
+   between the two BoQ speakers, ensure connectivity over this session
+   is verified, and further is used as the response channel for the
+   function channels as specified in Section 4.3.
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 5]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   It is an error to exchange BGP routing information over the control
+   channel.  This functionality is reserved for the Per-AFI/SAFI
+   Function channels.  If BGP routes are received on the control
+   channel, the receiving BGP speaker MUST send a BGP NOTIFICATION with
+   a Cease code on the control channel and close the QUIC connection.
+
+   QUIC supports connection migration.  However, only the client side
+   can move.  The role of the QUIC endpoints is important.  For future
+   extensibility, a new BoQ Capability indicates the configured role of
+   the BoQ speaker: Client, Server, or Any.  It is expected that the BGP
+   configuration and QUIC roles match.  The QUIC connection can be reset
+   if they don't.  See Section Section 5.1 for details.
+
+4.3.  Establish BGP/QUIC Function Channel
+
+   Per-AFI/SAFI Function channels are used to exchange routing
+   information.  After the control channel reaches the Established
+   state, function channels are created as unidirectional QUIC streams
+   and advertise routes for a single AFI/SAFI using BGP UPDATE messages.
+   Only one function channel per AFI/SAFI can exist from one BoQ speaker
+   to another (see Section 5.3).
+
+   It is an error to try to establish Per-AFI/SAFI Function channels
+   prior to the control channel transitioning to the Established state.
+   Per-AFI/SAFI Function channels SHOULD NOT be permitted to transition
+   to the Established state prior to the control channel itself entering
+   the Established state.
+
+   BoQ speakers asymmetrically create their function channels.  While it
+   might be the typical case for there to be a symmetric set of per-AFI/
+   SAFI function channels, one for each speaker, this is not a
+   requirement.  For example, BGP-LS [I-D.ietf-idr-rfc7752bis] may only
+   require that a BoQ speaker asymmetrically receive BGP-LS NLRI and may
+   not need to send them.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 6]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   A BoQ speaker that needs to advertise routes to its peer opens a
+   unidirectional stream to its neighbor by sending an OPEN message
+   indicating the particular AFI/SAFI to be used.  The BoQ connection-
+   wide parameters have previously been exchanged over the control
+   channel.  The function channel OPEN messages MUST contain an
+   identical BGP Autonomous System number and BGP Identifier as the
+   previously established control channel.  It is RECOMMENDED that the
+   BGP Hold Time value exchanged in the function channels be
+   significantly longer than the hold time negotiated for the control
+   channel.  It is the responsibility of the hold timer for the control
+   channel to provide connection verification for the BoQ connection.
+   The purpose of the function channel negotiated hold time is to
+   provide verification of the communication between the two BoQ
+   speakers for that AFI/SAFI.
+
+   The BGP Capabilities carried on the function channel SHOULD only be
+   those that are function-specific, as categorized in Table 1.
+   Conflicting BoQ connection-wide parameters exchanged over the
+   function channel MAY result in the BoQ speaker sending a NOTIFICATION
+   message and not permitting the per-AFI/SAFI function channel to
+   become Established.
+
+   The receiving BoQ speaker replies to those messages as defined in the
+   [RFC4271] FSM by sending its messages (OPEN/NOTIFICATION/KEEPALIVE)
+   addressed to the sender over the control channel.
+
+   Once the function channel has reached the Established state, BGP
+   UPDATE messages may be sent to the remote BoQ speaker.
+
+   A single function channel for an AFI/SAFI pair results in asymmetric
+   route advertisements.  Both BoQ speakers can create a function
+   channel to implement symmetric route advertisements.
+
+   Each function channel is created independently to naturally support
+   multi-channel BGP.  The neighbor state machines are decoupled; in
+   case of error, it is possible to reset only one function channel (one
+   direction of a symmetric route exchange) using a BoQ Error Message
+   with code BoQ Chanel Reset (see Section 6).  If one function channel
+   is blocked for some reason, other channels can still progress and
+   operate.
+
+4.4.  Channel Reset
+
+   A NOTIFICATION is sent over the control channel if the entire BGP
+   connection needs to be reset for any reason, such as a configuration
+   change or a network outage.  Existing error messages defined by
+   [RFC4271] and other various extensions SHOULD be used.
+
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 7]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   If the control channel is closed, the QUIC connection MUST be
+   terminated using a CONNECTION_CLOSE frame, and an error notification
+   (see Section 6) should be included to indicate that the connection
+   has been terminated by BGP.  If there are other open channels, they
+   are also closed when the connection is closed.
+
+   A function channel can be reset independently without impacting any
+   other function channels or the control channel.  Please refer to
+   Section 6.
+
+4.5.  Channel Coordination
+
+   A single QUIC stream provides ordered and reliable delivery.
+   However, there is no guarantee of transmission and delivery orders
+   across streams.  Therefore, if specific data from one channel needs
+   to be received before data from other channels, this requirement must
+   be accomplished through BGP.
+
+   As defined in [RFC9000], a QUIC implementation SHOULD provide ways in
+   which an application can indicate the relative priority of streams.
+
+   A BGP implementation utilizing QUIC as its transport protocol MUST
+   support a prioritization mechanism for BGP streams.  This is
+   essential for ensuring that critical routing information can be
+   transmitted with higher priority compared to non-routing information.
+
+   How to implement the supported priorities using QUIC congestion
+   control at the connection level, stream level flow control, and
+   packetization are out of the scope of this document.
+
+5.  Protocol Definitions
+
+5.1.  BGP Over QUIC Capability
+
+   QUIC supports connection migration.  However, only the client side
+   can move.  For a BoQ speaker to take advantage of the QUIC connection
+   migration capability, it has to be the QUIC client.
+
+   For an implementation of the BoQ defined in this document, an
+   explicit configuration is needed to identify a BoQ speaker's role: a
+   QUIC client, a QUIC server, or any (Don’t care).  The default value
+   can be "any"; other values MUST be explicitly configured.
+
+   A new ”BGP over QUIC” capability is defined below to signal whether
+   the BoQ speaker is a QUIC client, a QUIC server, or any (Don’t care).
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 8]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+         BoQ capability:
+           Code: TBD2 (to be assigned by IANA)
+           Length: 1(octet)
+           Value:
+             0 Any
+             1 Client
+             2 Server
+
+   The BoQ Capability is a control-only capability (see Table 1), which
+   means it SHOULD only be sent in the control channel.  It MUST be
+   ignored if received in the OPEN message of any function channel.
+
+   A BoQ session MUST be terminated if the BoQ speaker role
+   configuration and the QUIC connection role don't match by sending a
+   NOTIFICATION on the control channel with an error code of BGP over
+   QUIC Message Error and a Subcode BoQ Capability Mismatch, then
+   closing the QUIC onnection with a CONNECTION_CLOSE frame and an error
+   code of APPLICATION_ERROR.  Please refer to section 19.19 in
+   [RFC9000] . For example, if a BoQ speaker is configured as a client,
+   but the QUIC connection comes up as a QUIC server, the QUIC
+   connection must be terminated.  The "any" configuration matches both
+   the QUIC client and QUIC server roles.
+
+   Before initiating a QUIC connection for BGP, the BoQ role
+   configuration MUST be checked.  If a BoQ speaker is configured as a
+   QUIC client, it MUST try to initiate the QUIC connection.  If a BoQ
+   speaker is configured as a QUIC server, it MUST wait for a QUIC
+   connection.
+
+   The following collision avoidance procedure SHOULD be followed during
+   QUIC connection setup:
+
+      When one BoQ speaker is configured as a client, and the other side
+      is configured as a server, no collision will happen.  If the other
+      side initiates a QUIC connection, a QUIC CONNECTION_CLOSE frame
+      with error code APPLICATION_ERROR MUST be sent.
+
+      When a BoQ speaker is configured as "any" or as a server, it MUST
+      accept the QUIC connection initiated by the other BoQ speaker.
+
+   During the control channel setup, the BoQ capability MUST be checked
+   to make sure the configured BoQ role matches the QUIC connection.
+   When both BoQ peers are configured as "any", the session collision
+   mechanism defined in [RFC6286] and [RFC4271] MUST be followed.
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024                [Page 9]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   In case there is a BoQ role mismatch, for example, a BoQ speaker
+   configured as "any" accepted a QUIC connection from a BoQ speaker
+   configured as server, an error notification, BoQ Capability Mismatch,
+   SHOULD be sent and the connection MUST be terminated.  Please refer
+   to Section 6 for details.
+
+5.2.  Capability Category
+
+   For existing BGP capabilities, some of of them apply to the entire
+   connection and MUST be sent in the control channel OPEN message, such
+   as the BGP Role defined in [RFC9234].  If such capabilities are sent
+   in an OPEN message in a function channel, they MUST be ignored.
+
+   The following table shows the category of each capability.
+
+     +=======+=======================+=================+============+
+     | Value | Name                  | Ref             | Control/   |
+     |       |                       |                 | Function   |
+     +=======+=======================+=================+============+
+     | 1     | Multiprotocol         | RFC2858         | F          |
+     |       | Extensions for BGP-4  |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 2     | Route Refresh         | RFC2918         | F          |
+     |       | Capability for BGP-4  |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 3     | Outbound Route        | RFC5291         | F          |
+     |       | Filtering Capability  |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 5     | Extended Next Hop     | RFC8950         | F          |
+     |       | Encoding              |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 6     | BGP Extended Message  | RFC8654         | C/F        |
+     +-------+-----------------------+-----------------+------------+
+     | 7     | BGPsec Capability     | RFC8205         | C/F        |
+     +-------+-----------------------+-----------------+------------+
+     | 8     | Multiple Labels       | RFC8277         | C -        |
+     |       | Capability            |                 | deprecated |
+     +-------+-----------------------+-----------------+------------+
+     | 9     | BGP Role              | RFC9234         | C          |
+     +-------+-----------------------+-----------------+------------+
+     | 64    | Graceful Restart      | RFC4724         | C/F        |
+     |       | Capability            |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 65    | Support for 4-octet   | RFC6793         | C/F        |
+     |       | AS number capability  |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 67    | Support for Dynamic   | draft-ietf-idr- | C/F        |
+     |       | Capability            | dynamic-cap     |            |
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 10]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+     |       | (capability specific) |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 68    | Multisession BGP      | draft-ietf-idr- | Not        |
+     |       | Capability            | bgp-            | compatible |
+     |       |                       | multisession    |            |
+     +-------+-----------------------+-----------------+------------+
+     | 69    | ADD-PATH Capability   | RFC7911         | F          |
+     +-------+-----------------------+-----------------+------------+
+     | 70    | Enhanced Route        | RFC7313         | F          |
+     |       | Refresh Capability    |                 |            |
+     +-------+-----------------------+-----------------+------------+
+     | 71    | Long-Lived Graceful   | draft-uttaro-   | C/F        |
+     |       | Restart (LLGR)        | idr-bgp-        |            |
+     |       | Capability            | persistence     |            |
+     +-------+-----------------------+-----------------+------------+
+     | 72    | Routing Policy        | draft-ietf-idr- | ???        |
+     |       | Distribution          | rpd             |            |
+     +-------+-----------------------+-----------------+------------+
+     | 73    | FQDN Capability       | draft-walton-   | C          |
+     |       |                       | bgp-hostname-   |            |
+     |       |                       | capability      |            |
+     +-------+-----------------------+-----------------+------------+
+     | 74    | BFD Capability        | draft-ietf-idr- | C          |
+     |       |                       | bgp-bfd-strict- |            |
+     |       |                       | mode            |            |
+     +-------+-----------------------+-----------------+------------+
+     | 75    | Software Version      | draft-abraitis- | C/F        |
+     |       | Capability            | bgp-version-    |            |
+     |       |                       | capability      |            |
+     +-------+-----------------------+-----------------+------------+
+
+                    Table 1: Capability Category Table
+
+5.3.  Channel Collision Avoidance
+
+   A function channel for a specific Network layer protocol MUST NOT be
+   created if one already exists.
+
+   If a BoQ speaker receives a function channel creation request for an
+   AFI/SAFI that already exists, the local BoQ speaker SHOULD send a
+   notification with Error Code BoQ and subcode BoQ Channel Conflict
+   through the control channel, and upon receiving this notification the
+   channel initiator MUST terminate the channel.
+
+   If a BoQ speaker receives a functional channel creation request for
+   an AFI/SAFI that it doesn't support, the local BoQ speaker SHOULD
+   send a notification using existing subcode "Unsupported AFI/SAFI" in
+   the OPEN Message Error BGP NOTIFICATION message.
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 11]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   Unless allowed via configuration, a channel collision with an
+   existing BGP channel in the Established state causes the closing of
+   the newly created channel.
+
+5.4.  BoQ Framing Layer
+
+   In version 1 of QUIC, BoQ messages are carried by QUIC STREAM frames.
+   In BoQ, the control channel always uses QUIC stream 0, which is a
+   client-initiated bidirectional stream.  Function channels, which are
+   unidirectional streams, can be client or server initiated.
+
+   Some BoQ messages, although sent in the control channel, are meant
+   for a function channel, such as the responding OPEN message or
+   KEEPALIVE message for a function channel.  These messages need to
+   carry the corresponding function channel/stream ID information.
+
+   There are two types of BoQ Frames: Data and Control Data.
+
+   Data frames have the following format:
+
+       BoQ Data Frame Format {
+         Type (0),
+         Length (),
+         Frame Payload (...)
+       }
+
+   Control Data Frames have the following format:
+
+       BoQ Control Data Frame Format {
+         Type (1),
+         Length (),
+         Stream ID (),
+         Frame Payload (...)
+       }
+
+   Type: One octet, identifying the frame type.
+
+   Length: The two-byte unsigned integer that describes the length in
+   bytes of the frame payload.
+
+   Stream ID: A Variable-length integer indicating the receiving stream
+   ID of this message.
+
+   Frame Payload: BGP messages.
+
+   The following table lists the frame type to be used when BGP messages
+   are sent in different channels.
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 12]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+          +===============+=================+==================+
+          |               | Control Channel | Function Channel |
+          +===============+=================+==================+
+          | OPEN          | Control Data    | Data             |
+          +---------------+-----------------+------------------+
+          | UPDATE        | /               | Data             |
+          +---------------+-----------------+------------------+
+          | KEEPALIVE     | Control Data    | Data             |
+          +---------------+-----------------+------------------+
+          | NOTIFICATION  | Control Data    | Data             |
+          +---------------+-----------------+------------------+
+          | Route-Refresh | Control Data    | /                |
+          +---------------+-----------------+------------------+
+
+                     Table 2: BoQ Frame Type Mapping
+
+   An OPEN message sent in the control channel for the control channel
+   creation MUST NOT contain Multiprotocol Extensions Capability (value
+   1) in the Capabilities.  An OPEN message sent in a function channel
+   and the responding OPEN message sent in the control channel for one
+   AFI/SAFI MUST contain only one Multiprotocol Extensions Capability
+   (value 1) in the Capabilities.
+
+   There is no UPDATE message sent in the control channel.
+
+   For the KEEPALIVE and NOTIFICATION messages sent in the control
+   channel for one function channel, the BoQ Control Data frame MUST be
+   used, and the stream ID in the frame is to indiate the the target
+   AFI/SAFI.
+
+   Route-refresh messages are sent in the control channel using BoQ
+   Control Data Frame.
+
+6.  Error Handling
+
+   OPEN message error handling is defined in section 6.2 of [RFC4271].
+   This document defines a new NOTIFCATION error code:
+
+       Error Code   Name
+         TBD       BoQ Message Error
+
+   The following error subcode is defined as well:
+
+       Subcode      Name
+         1          BoQ Capability Mismatch
+         2          BoQ Connection Reset
+         3          BoQ Channel Reset
+         4          BoQ Channel Conflict
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 13]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   BoQ Capability Mismatch is sent when a BoQ speaker's configured role
+   doesn't match the QUIC connection, and the connection MUST be
+   terminated after sending this notification.  Details are described in
+   Section 5.1.
+
+   The error handling specified in this section is applicable for a BoQ
+   speaker implementing this document.
+
+   Any individual BGP channel can be terminated as specified in
+   [RFC4486].
+
+7.  Modifications to FSM
+
+   TBD.
+
+8.  Operational Considerations
+
+8.1.  Using Multi-Channel BGP over QUIC
+
+   The decision to use BoQ instead of the TCP-based mechanism defined in
+   [RFC4271] is an operational decision and out of the scope of this
+   document.  An implementation MUST provide a configuration mechanism
+   to enable BoQ on a per-peer basis.
+
+   Connectivity problems (e.g., blocking UDP) can result in a failure to
+   establish a QUIC connection; BGP speakers SHOULD attempt to establish
+   a TCP-based BGP session in this case.
+
+8.2.  BGP Multi-Channel Prioritization
+
+   One of the drawbacks of a single BGP session is that control plane
+   messages for all supported Network Layer protocols use the same
+   connection, which may cause resource contention.
+
+   QUIC [RFC9000] does not provide a mechanism for exchanging
+   prioritization information.  Instead, it recommends that
+   implementations provide ways for an application to indicate the
+   relative priority of streams, in this case, mapped to BGP channels.
+   An operator should prioritize BGP channels (streams) that carry
+   critical control plane information if the functionality is available.
+   The definition of this functionality and the determination of the
+   importance of a BGP session are both outside the scope of this
+   document.
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 14]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+9.  Security Considerations
+
+   This document replaces the transport protocol layer of BGP from TCP
+   to QUIC.  It does not modify the basic protocol specifications of
+   BGP, and therefore does not introduce new security risks to the basic
+   BGP protocol.  The non-TCP-related considerations of [RFC4271],
+   [RFC4272], and [RFC7454] apply to the specification in this document.
+
+   BoQ enhances transport-layer security for BGP sessions, refer to
+   [RFC7454]:
+
+      (1) Supports QUIC server identity authentication.
+
+      (2) (Optional) Supports QUIC client identity authentication.
+
+      (3) Confidentiality protection of BGP messages is supported.  All
+      BGP messages are encrypted for transmission.
+
+      (4) Supports integrity protection for BGP messages.
+
+   The use of a specific UDP port number and an ALPN token protects a
+   BoQ speaker from attempts to establish an unexpected BGP session.
+   Additionally, all packets directed to UDP port TBD on the local
+   device and sourced from an address not known or permitted to become a
+   BGP neighbor SHOULD be discarded.
+
+   With BGP multi-channel support using QUIC streams, it separates the
+   control plane traffic over multiple channels.  The effect of a
+   session-based vulnerability is reduced; only a single channel is
+   affected and not the whole connection.  The result is increased
+   resiliency.
+
+   On the other hand, a high number of BGP channels may result in higher
+   resource utilization and the risk of depletion.  Also, more channels
+   may imply additional configuration and operational complexity.
+
+10.  IANA Considerations
+
+10.1.  UDP Port for BoQ
+
+   IANA is requested to assign a UDP port (TBD1) from the "Service Name
+   and Transport Protocol Port Number Registry" as follows:
+
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 15]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+               +---------------------------+---------------+
+               | Service Name              | boq           |
+               +---------------------------+---------------+
+               | Port Number               | TBD1          |
+               +---------------------------+---------------+
+               | Transport Protocol        | udp           |
+               +---------------------------+---------------+
+               | Description               | BGP over QUIC |
+               +---------------------------+---------------+
+               | Assignee                  | IETF          |
+               +---------------------------+---------------+
+               | Contact                   | IDR WG        |
+               +---------------------------+---------------+
+               | Registration Data         | TBD           |
+               +---------------------------+---------------+
+               | Reference                 | this document |
+               +---------------------------+---------------+
+               | Unauthorized Use Reported | idr@ietf.org  |
+               +---------------------------+---------------+
+
+                       Table 3: Port Number Registry
+
+10.2.  Registration of the BGP4 Identification String
+
+   This document creates a new registration for the identification of
+   BGP [RFC4271] in the "TLS Application-Layer Protocol Negotiation
+   (ALPN) Protocol IDs" registry.
+
+   The "boq" string identifies BGP-4 [RFC4271] over QUIC:
+
+     Protocol: Multi-Channel BGP over QUIC
+
+     Identification Sequence: 0x62 0x6f 0x71 ("boq")
+
+     Specification: This document
+
+10.3.  BGP Over QUIC Capability
+
+   IANA is asked to assign a new Capability code [RFC5492] for the BGP
+   over QUIC Capability Section 5.1 as follows:
+
+
+
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 16]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+                  +-------------------+-----------------+
+                  | Value             | TBD2            |
+                  +-------------------+-----------------+
+                  | Description       | BoQ Capability  |
+                  +-------------------+-----------------+
+                  | Reference         | [This Document] |
+                  +-------------------+-----------------+
+                  | Change Controller | IETF            |
+                  +-------------------+-----------------+
+
+                    Table 4: BoQ Capability Registration
+
+10.4.  Error Code
+
+   This document defines a new NOTIFICATION error code and related
+   subcodes related to the BoQ procedures.  IANA is asked to assign a
+   new error code from the "BGP Error (Notification) Codes" registry
+   with the name "BGP over QUIC Message Error", referencing this
+   document.
+
+   IANA is asked to create a new registry for the error subcodes as
+   follows:
+
+         Under "Border Gateway Protocol (BGP) Parameters",
+         under "BGP Error Subcodes":
+         Registry: "BGP over QUIC Message Error subcodes"
+         Reference: this document
+         Registration Procedure(s): Values 0-127 Standards Action,
+           values 128-255 First Come First Served
+
+           +=======+=========================+=================+
+           | Value |           Name          |    Reference    |
+           +=======+=========================+=================+
+           |   0   | Reserved                | [this document] |
+           +-------+-------------------------+-----------------+
+           |   1   | BoQ Capability Mismatch | [this document] |
+           +-------+-------------------------+-----------------+
+           |   2   | BoQ Connection Reset    | [this document] |
+           +-------+-------------------------+-----------------+
+           |   3   | BoQ Channel Reset       | [this document] |
+           +-------+-------------------------+-----------------+
+           |   4   | BoQ Channel Conflict    | [this document] |
+           +-------+-------------------------+-----------------+
+           | 5-255 | Unassigned              |                 |
+           +-------+-------------------------+-----------------+
+
+               Table 5: BGP over QUIC Message Error subcodes
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 17]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+11.  Acknowledgement
+
+   This document references the text and procedures defined in
+   [I-D.ietf-idr-bgp-multisession], and we are grateful for their
+   contributions.
+
+   The authors would like to thank xx for review and comments.
+
+12.  References
+
+12.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC4271]  Rekhter, Y., Ed., Li, T., Ed., and S. Hares, Ed., "A
+              Border Gateway Protocol 4 (BGP-4)", RFC 4271,
+              DOI 10.17487/RFC4271, January 2006,
+              <https://www.rfc-editor.org/info/rfc4271>.
+
+   [RFC4486]  Chen, E. and V. Gillet, "Subcodes for BGP Cease
+              Notification Message", RFC 4486, DOI 10.17487/RFC4486,
+              April 2006, <https://www.rfc-editor.org/info/rfc4486>.
+
+   [RFC5492]  Scudder, J. and R. Chandra, "Capabilities Advertisement
+              with BGP-4", RFC 5492, DOI 10.17487/RFC5492, February
+              2009, <https://www.rfc-editor.org/info/rfc5492>.
+
+   [RFC6286]  Chen, E. and J. Yuan, "Autonomous-System-Wide Unique BGP
+              Identifier for BGP-4", RFC 6286, DOI 10.17487/RFC6286,
+              June 2011, <https://www.rfc-editor.org/info/rfc6286>.
+
+   [RFC7301]  Friedl, S., Popov, A., Langley, A., and E. Stephan,
+              "Transport Layer Security (TLS) Application-Layer Protocol
+              Negotiation Extension", RFC 7301, DOI 10.17487/RFC7301,
+              July 2014, <https://www.rfc-editor.org/info/rfc7301>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC9000]  Iyengar, J., Ed. and M. Thomson, Ed., "QUIC: A UDP-Based
+              Multiplexed and Secure Transport", RFC 9000,
+              DOI 10.17487/RFC9000, May 2021,
+              <https://www.rfc-editor.org/info/rfc9000>.
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 18]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+12.2.  Informative References
+
+   [I-D.ietf-idr-bgp-multisession]
+              Scudder, J., Appanna, C., and I. Varlashkin, "Multisession
+              BGP", Work in Progress, Internet-Draft, draft-ietf-idr-
+              bgp-multisession-07, 13 September 2012,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-idr-bgp-
+              multisession-07>.
+
+   [I-D.ietf-idr-rfc7752bis]
+              Talaulikar, K., "Distribution of Link-State and Traffic
+              Engineering Information Using BGP", Work in Progress,
+              Internet-Draft, draft-ietf-idr-rfc7752bis-16, 20 February
+              2023, <https://datatracker.ietf.org/doc/html/draft-ietf-
+              idr-rfc7752bis-16>.
+
+   [RFC4272]  Murphy, S., "BGP Security Vulnerabilities Analysis",
+              RFC 4272, DOI 10.17487/RFC4272, January 2006,
+              <https://www.rfc-editor.org/info/rfc4272>.
+
+   [RFC4760]  Bates, T., Chandra, R., Katz, D., and Y. Rekhter,
+              "Multiprotocol Extensions for BGP-4", RFC 4760,
+              DOI 10.17487/RFC4760, January 2007,
+              <https://www.rfc-editor.org/info/rfc4760>.
+
+   [RFC7454]  Durand, J., Pepelnjak, I., and G. Doering, "BGP Operations
+              and Security", BCP 194, RFC 7454, DOI 10.17487/RFC7454,
+              February 2015, <https://www.rfc-editor.org/info/rfc7454>.
+
+   [RFC9234]  Azimov, A., Bogomazov, E., Bush, R., Patel, K., and K.
+              Sriram, "Route Leak Prevention and Detection Using Roles
+              in UPDATE and OPEN Messages", RFC 9234,
+              DOI 10.17487/RFC9234, May 2022,
+              <https://www.rfc-editor.org/info/rfc9234>.
+
+Authors' Addresses
+
+   Alvaro Retana
+   Futurewei Technologies
+   2330 Central Expressway
+   Santa Clara, CA 95050
+   United States of America
+   Email: aretana@futurewei.com
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 19]
+
+Internet-Draft            BGP over QUIC Streams                July 2023
+
+
+   Yingzhen Qu
+   Futurewei Technologies
+   2330 Central Expressway
+   Santa Clara, CA 95050
+   United States of America
+   Email: yingzhen.qu@futurewei.com
+
+
+   Jeffrey Haas
+   Juniper Networks
+   1133 Innovation Way
+   Sunnyvale, CA 94089
+   United States of America
+   Email: jhaas@juniper.net
+
+
+   Shuanglong Chen
+   Huawei Technologies
+   No.156 Beiqing Rd.
+   Beijing
+   100095
+   China
+   Email: chenshuanglong@huawei.com
+
+
+   Jeff Tantsura
+   Nvidia
+   United States of America
+   Email: jefftant.ietf@gmail.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Retana, et al.           Expires 19 January 2024               [Page 20]
