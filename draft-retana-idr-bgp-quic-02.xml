@@ -130,7 +130,7 @@
        control of the connection.
      </t>
      <t>
-        This document specifies the procedures for BGP to use QUIC as a transport protocol with a mechanism to carry Network Layer protocols (AFI/SAFI) over individual streams.  The Network layer protocols are identified using a combination of Address Family (AF) and Subsequent Address Family (SAFI), as described in <xref target="RFC4760"/>. These per-AFI/SAFI streams (function channels) and the associated control mechanism (control channel) for the session are called "BGP channels". In one BGP over QUIC (BoQ) connection, one control channel and one or more function channels are used to carry routing information.
+        This document specifies the procedures for BGP to use QUIC as a transport protocol with a mechanism to carry Network Layer protocols (AFI/SAFI) over individual streams.  The Network Layer protocols are identified using a combination of Address Family (AF) and Subsequent Address Family (SAFI), as described in <xref target="RFC4760"/>. These per-AFI/SAFI streams (function channels) and the associated control mechanism (control channel) for the session are called "BGP channels". In one BGP over QUIC (BoQ) connection, one control channel and one or more function channels are used to carry routing information.
       </t>
     </section>
 
@@ -147,9 +147,9 @@
       <t>BoQ, Multi-channel BGP using QUIC: Running the BGP protocol over multiple QUIC streams as defined in this document.</t>
       <t>QUIC connection: A transport-layer connection between two endpoints using QUIC <xref target="RFC9000"/>.</t>
       <t>QUIC streams: A bidirectional or unidirectional bytestream provided by the QUIC transport <xref target="RFC9000"/>.</t>
-      <t>BGP channel: Instance of BGP protocol state machine mapped to specific QUIC stream.</t>
-      <t>BGP control channel: a channel delicated to tranmitting the session control data, which is implemented as a bidirectional stream.</t>
-      <t>BGP function channel:  BGP per AFI/SAFI channel, which is implemented
+      <t>BGP channel: An instance of a BGP protocol state machine mapped to a specific QUIC stream.</t>
+      <t>BGP control channel: A channel dedicated to transmitting the session control data, which is implemented as a bidirectional stream.</t>
+      <t>BGP function channel:  A BGP per AFI/SAFI channel, which is implemented
          asymmetrically as unidirectional streams.</t>
    </list></t>
     </section>
@@ -196,7 +196,7 @@
         <t>
           BoQ speakers asymmetrically create their function channels.  While it might be the typical case for there to be a symmetric set of per-AFI/SAFI function channels, one for each speaker, this is not a requirement.  For example, BGP-LS <xref target="I-D.ietf-idr-rfc7752bis"/> may only require that a BoQ speaker asymmetrically receive BGP-LS NLRI and may not need to send them.</t>
         <t>
-          A BoQ speaker that needs to advertise routes to its peer opens a unidirectional stream to its neighbor by sending an OPEN message indicating the particular AFI/SAFI to be used.  The BoQ connection-wide parameters have previously been exchanged over the control channel. The function channel OPEN messages MUST contain identical BGP Autonomous System number and BGP Identifier as the previously established control channel.  It is RECOMMENDED that the BGP Hold Time value exchanged in the function channels be significantly longer than the hold time negotiated for the control channel.  It is the responsibility of the hold timer for the control channel to provide connection verification for the BoQ connection.  The purpose of the function channel negotiated hold time is to provide verification of the communication between the two BoQ speakers for that AFI/SAFI.</t>
+          A BoQ speaker that needs to advertise routes to its peer opens a unidirectional stream to its neighbor by sending an OPEN message indicating the particular AFI/SAFI to be used.  The BoQ connection-wide parameters have previously been exchanged over the control channel. The function channel OPEN messages MUST contain an identical BGP Autonomous System number and BGP Identifier as the previously established control channel.  It is RECOMMENDED that the BGP Hold Time value exchanged in the function channels be significantly longer than the hold time negotiated for the control channel.  It is the responsibility of the hold timer for the control channel to provide connection verification for the BoQ connection.  The purpose of the function channel negotiated hold time is to provide verification of the communication between the two BoQ speakers for that AFI/SAFI.</t>
         <t>
           The BGP Capabilities carried on the function channel SHOULD only be those that are function-specific, as categorized in <xref target="CapabilityCategory"/>.  Conflicting BoQ connection-wide parameters exchanged over the function channel MAY result in the BoQ speaker sending a NOTIFICATION message and not permitting the per-AFI/SAFI function channel to become Established. </t>
         <t>
@@ -206,7 +206,7 @@
         <t>
           A single function channel for an AFI/SAFI pair results in asymmetric route advertisements.  Both BoQ speakers can create a function channel to implement symmetric route advertisements.</t>
         <t>
-          Each function channel is created independently to naturally support multi-channel BGP. The neighbor state machines are decoupled; in case of error, it is possible to reset only one function channel (one direction of a symmetric route exchange) using BoQ Error Message with code BoQ Chanel Reset (see <xref target="notifications"/>). If one function channel is blocked for some reason, other channels can still progress and operate.</t>
+          Each function channel is created independently to naturally support multi-channel BGP. The neighbor state machines are decoupled; in case of error, it is possible to reset only one function channel (one direction of a symmetric route exchange) using a BoQ Error Message with code BoQ Chanel Reset (see <xref target="notifications"/>). If one function channel is blocked for some reason, other channels can still progress and operate.</t>
       </section>
 
       <section title="Channel Reset">
@@ -215,7 +215,7 @@
         <t>
           If the control channel is closed, the QUIC connection MUST be terminated using a CONNECTION_CLOSE frame, and an error notification (see <xref target="notifications"/>) should be included to indicate that the connection has been terminated by BGP. If there are other open channels, they are also closed when the connection is closed.</t>
         <t>
-          A function channel can be reset independently without impacting any other function channels or the control channel. Please refer to <xref target="notifications"/> </t>
+          A function channel can be reset independently without impacting any other function channels or the control channel. Please refer to <xref target="notifications"/>.</t>
       </section>
 
       <section title="Channel Coordination">
@@ -254,19 +254,19 @@
         <t>
           The BoQ Capability is a control-only capability (see <xref target="CapabilityCategory"/>), which means it SHOULD only be sent in the control channel. It MUST be ignored if received in the OPEN message of any function channel.</t>
         <t>
-          A BoQ session MUST be terminated if the BoQ speaker role configuration and the QUIC connection role doesn't match by sending a NOTIFICATION on the control channel with an error code of BGP over QUIC Message Error and a Subcode BoQ Capability Mismatch, the close the QUIC onnection with a CONNECTION_CLOSE frame with an error code of APPLICATION_ERROR. Please refer to section 19.19 in <xref target="RFC9000"/> . For example, if a BoQ speaker is configured as a client, but the QUIC connection comes up as a QUIC server, the QUIC connection must be terminated. The "any" configuration matches both the QUIC client and QUIC server roles.</t>
+          A BoQ session MUST be terminated if the BoQ speaker role configuration and the QUIC connection role don't match by sending a NOTIFICATION on the control channel with an error code of BGP over QUIC Message Error and a Subcode BoQ Capability Mismatch, then closing the QUIC onnection with a CONNECTION_CLOSE frame and an error code of APPLICATION_ERROR. Please refer to section 19.19 in <xref target="RFC9000"/> . For example, if a BoQ speaker is configured as a client, but the QUIC connection comes up as a QUIC server, the QUIC connection must be terminated. The "any" configuration matches both the QUIC client and QUIC server roles.</t>
         <t>
-          Before initiating a QUIC connection for BGP, the BoQ role configuration MUST be checked. If a BoQ speaker is configured as QUIC client, it MUST try to initiate the QUIC connection. If a BoQ speaker is configured as QUIC server, it MUST wait for a QUIC connection.</t>
+          Before initiating a QUIC connection for BGP, the BoQ role configuration MUST be checked. If a BoQ speaker is configured as a QUIC client, it MUST try to initiate the QUIC connection. If a BoQ speaker is configured as a QUIC server, it MUST wait for a QUIC connection.</t>
         <t>
           The following collision avoidance procedure SHOULD be followed during QUIC connection setup:
           <list style="empty">
-            <t>When one BoQ speaker is configured as client, and the other side is configured as server, no collision will happen. If the other side initiates a QUIC connection, a QUIC CONNECTION_CLOSE frame with error code APPLICATION_ERROR MUST be sent.</t>          
-            <t>When a BoQ speaker is configured as any or server, it MUST accept the QUIC connection initiated by the other BoQ speaker.</t>
+            <t>When one BoQ speaker is configured as a client, and the other side is configured as a server, no collision will happen. If the other side initiates a QUIC connection, a QUIC CONNECTION_CLOSE frame with error code APPLICATION_ERROR MUST be sent.</t>          
+            <t>When a BoQ speaker is configured as "any" or a server, it MUST accept the QUIC connection initiated by the other BoQ speaker.</t>
           </list></t>
         <t>
-          During the control channel setup, the BoQ capability MUST be checked to make sure the configured BoQ role matches the QUIC connection. When both BoQ peers are configured as "any", existing session collision mechanism defined in <xref target="RFC6286"/> and <xref target="RFC4271"/> MUST be followed.</t>
+          During the control channel setup, the BoQ capability MUST be checked to make sure the configured BoQ role matches the QUIC connection. When both BoQ peers are configured as "any", the session collision mechanism defined in <xref target="RFC6286"/> and <xref target="RFC4271"/> MUST be followed.</t>
         <t>
-          In case there is a BoQ role mismatch, for example, a BoQ speaker configured as any accepted a QUIC connection from a BoQ speaker configures as server, an error notification, BGP Capability Mismatch, SHOULD be sent and the connection MUST be terminated. Please refer to <xref target="notifications"/> for detail.</t>      
+          In case there is a BoQ role mismatch, for example, a BoQ speaker configured as "any" accepted a QUIC connection from a BoQ speaker configured as server, an error notification, BoQ Capability Mismatch, SHOULD be sent and the connection MUST be terminated. Please refer to <xref target="notifications"/> for details.</t>      
       </section>
 
       <section title="Capability Category">
@@ -364,7 +364,7 @@
             <tr>
               <td>68</td>
               <td>Multisession BGP Capability</td>
-              <td>draft-ietf-idr-bgp- multisession</td>
+              <td>draft-ietf-idr-bgp-multisession</td>
               <td>Not compatible</td>
            </tr>
 
@@ -385,7 +385,7 @@
             <tr>
               <td>71</td>
               <td>Long-Lived Graceful Restart (LLGR) Capability</td>
-              <td>draft-uttaro-idr-bgp- persistence</td>
+              <td>draft-uttaro-idr-bgp-persistence</td>
               <td>C/F</td>
             </tr>
 
@@ -399,21 +399,21 @@
             <tr>
               <td>73</td>
               <td>FQDN Capability</td>
-              <td>draft-walton-bgp- hostname-capability</td>
+              <td>draft-walton-bgp-hostname-capability</td>
               <td>C</td>
             </tr>
 
             <tr>
               <td>74</td>
               <td>BFD Capability</td>
-              <td>draft-ietf-idr-bgp-bfd- strict-mode</td>
+              <td>draft-ietf-idr-bgp-bfd-strict-mode</td>
               <td>C</td>
            </tr>
 
            <tr>
              <td>75</td>
              <td>Software Version Capability</td>
-             <td>draft-abraitis-bgp- version-capability</td>
+             <td>draft-abraitis-bgp-version-capability</td>
              <td>C/F</td>
            </tr>
          </tbody>
@@ -425,9 +425,9 @@
         <t>
           A function channel for a specific Network layer protocol MUST NOT be created if one already exists.</t>
         <t>
-          If a BoQ speaker receives a function channel creation request for an AFI/SAFI that already exists, the local BoQ speaker SHOULD send a notification with Error Code BoQ and subcode BoQ Channel Conflict through the control channel, and upon receiving this notification the channel initiator MUST terminates the channel. </t>
+          If a BoQ speaker receives a function channel creation request for an AFI/SAFI that already exists, the local BoQ speaker SHOULD send a notification with Error Code BoQ and subcode BoQ Channel Conflict through the control channel, and upon receiving this notification the channel initiator MUST terminate the channel. </t>
         <t>
-          If a BoQ speaker receives a functional channel creation request for an AFI/SAFI that it doesn't support, the local BoQ speaker SHOULD send a notification using existing subcode "Unsupported AFI/SAFI" in the OPEN Message Error NOTIFICATION message.</t>
+          If a BoQ speaker receives a functional channel creation request for an AFI/SAFI that it doesn't support, the local BoQ speaker SHOULD send a notification using existing subcode "Unsupported AFI/SAFI" in the OPEN Message Error BGP NOTIFICATION message.</t>
         <t>
           Unless allowed via configuration, a channel collision with an existing BGP channel in the Established state causes the closing of the newly created channel.</t>
       </section>
@@ -458,7 +458,7 @@
       Frame Payload (...)
     }   
         </artwork>
-        <t>Type: One octet, it identifies the frame type.</t>
+        <t>Type: One octet, identifying the frame type.</t>
         <t>Length: The two-byte unsigned integer that describes the length in bytes of the frame payload.</t>
         <t>Stream ID: A Variable-length integer indicating the receiving stream ID of this message.</t>
         <t>Frame Payload: BGP messages.</t>
@@ -503,7 +503,7 @@
         </table>
 
         <t>
-          OPEN message sent in the control channel for the control channel creation MUST NOT contain Multiprotocol Extensions Capability (value 1) in the Capabilities. OPEN message sent in a function channel and the responding OPEN message sent in the control channel for one AFI/SAFI MUST contain only one Multiprotocol Extensions Capability (value 1) in the Capabilities.</t>
+          An OPEN message sent in the control channel for the control channel creation MUST NOT contain Multiprotocol Extensions Capability (value 1) in the Capabilities. An OPEN message sent in a function channel and the responding OPEN message sent in the control channel for one AFI/SAFI MUST contain only one Multiprotocol Extensions Capability (value 1) in the Capabilities.</t>
         <t>
           There is no UPDATE message sent in the control channel.</t>
         <t><!-- XXX JMH -->
@@ -531,7 +531,7 @@
       4          BoQ Channel Conflict
       </artwork>
       <t>
-        BoQ Capability Mismatch is sent when a BoQ speaker's configured role doesn't match the QUIC connection, and the connection MUST be terminated after sending this notification. Details are described in <xref target="BoQ Capability"/></t>
+        BoQ Capability Mismatch is sent when a BoQ speaker's configured role doesn't match the QUIC connection, and the connection MUST be terminated after sending this notification. Details are described in <xref target="BoQ Capability"/>.</t>
 
       <t>
         The error handling specified in this section is applicable for a BoQ speaker implementing this document.</t>
@@ -547,14 +547,14 @@
     </section>
 
     <section title="Operational Considerations">
-      <section title="Using Multi Channel BGP over QUIC">
+      <section title="Using Multi-Channel BGP over QUIC">
         <t>
           The decision to use BoQ instead of the TCP-based mechanism defined in <xref target="RFC4271"/> is an operational decision and out of the scope of this document.  An implementation MUST provide a configuration mechanism to enable BoQ on a per-peer basis.</t>
         <t>
           Connectivity problems (e.g., blocking UDP) can result in a failure to establish a QUIC connection; BGP speakers SHOULD attempt to establish a TCP-based BGP session in this case.</t>
       </section>
 
-      <section title="BGP Multi Channel Prioritization">
+      <section title="BGP Multi-Channel Prioritization">
         <t>
           One of the drawbacks of a single BGP session is that control
           plane messages for all supported Network Layer protocols use the same
@@ -609,8 +609,8 @@
         become a BGP neighbor SHOULD be discarded.</t>
 
       <t>
-        With BGP multi channel support using QUIC streams, it separates the
-        control plane traffic over multiple channels, the effect of a
+        With BGP multi-channel support using QUIC streams, it separates the
+        control plane traffic over multiple channels. The effect of a
         session-based vulnerability is reduced; only a single channel is
         affected and not the whole connection.  The result is increased
         resiliency.</t>
