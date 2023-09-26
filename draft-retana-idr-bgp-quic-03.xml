@@ -497,7 +497,7 @@
             <tr>
               <td>Route-Refresh</td>
               <td>Control Data</td>
-              <td>/</td>
+              <td>Data (subtype 1, 2)</td>
             </tr>
           </tbody>
         </table>
@@ -507,9 +507,15 @@
         <t>
           There is no UPDATE message sent in the control channel.</t>
         <t><!-- XXX JMH -->
-          For the KEEPALIVE and NOTIFICATION messages sent in the control channel for one function channel, the BoQ Control Data frame MUST be used, and the stream ID in the frame is to indiate the the target AFI/SAFI.</t>
+          For the KEEPALIVE and NOTIFICATION messages sent in the control channel for one function channel, the BoQ Control Data frame MUST be used, and the stream ID in the frame is to indicate the the target AFI/SAFI.</t>
         <t>
-          Route-refresh messages are sent in the control channel using BoQ Control Data Frame.</t>
+          Route-refresh messages are sent in the control channel and function channels. Please refer to <xref target="routerefresh"/> for details.</t>
+      </section>
+      <section anchor="routerefresh" title="Route Refresh">
+        <t>BGP Route Refresh messages are defined in <xref target="RFC2918"/> and  <xref target="RFC7313"/>. </t>
+        <t>When two BoQ peers with the enhanced route refresh capability, wish to initiate a route refresh from one peer to another, the initiating speaker MUST send a ROUTE-REFRESH message with subtype 0 in its control channel with the stream ID set to the corresponding AFI/SAFI.</t>
+        <t>When starting a route refresh for a specific AFI/SAFI,  whether initiated locally or in response to a route refresh request from the peer, a BoQ speaker MUST send a beginning of a route refresh (BoRR) message in the function channel. After the re-advertisement of the route entries it MUST send an ending of a route refresh (EoRR) message in the function channel.</t>
+        <t>If only the route refresh capability defined in <xref target="RFC2918"/> is supported, but not the enhanced route refresh capability defined in <xref target="RFC7313"/>, a BoQ speaker MUST send the route refresh request message in the control channel.</t>
       </section>
     </section>
 
@@ -767,8 +773,10 @@
     <references title="Informative References">
     <xi:include href="https://www.rfc-editor.org/refs/bibxml3/reference.I-D.ietf-idr-bgp-multisession.xml"/>
     <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-idr-rfc7752bis.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.2918.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4272.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4760.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.7313.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.7454.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.9234.xml"/>
     </references>
