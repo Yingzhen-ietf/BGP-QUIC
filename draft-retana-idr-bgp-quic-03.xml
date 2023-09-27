@@ -443,8 +443,8 @@
           Data frames have the following format:</t>
         <artwork>
     BoQ Data Frame Format {
-      Type (0),
-      Length (),
+      Type (16) = 0,
+      Length (16),
       Frame Payload (...)
     }
         </artwork>
@@ -452,15 +452,16 @@
           Control Data Frames have the following format:</t>
         <artwork>
     BoQ Control Data Frame Format {
-      Type (1),
-      Length (),
-      Stream ID (),
+      Type (16) = 1,
+      Length (16),
+      Stream ID (62),
+      padding (2) = 0,
       Frame Payload (...)
     }   
         </artwork>
-        <t>Type: One octet, identifying the frame type.</t>
+        <t>Type: two octets, identifying the frame type.</t>
         <t>Length: The two-byte unsigned integer that describes the length in bytes of the frame payload.</t>
-        <t>Stream ID: A Variable-length integer indicating the receiving stream ID of this message.</t>
+        <t>Stream ID: A 62-bit integer indicating the receiving stream ID of this message.</t>
         <t>Frame Payload: BGP messages.</t>
         <t>
           The following table lists the frame type to be used when BGP messages are sent in different channels.</t>
@@ -539,6 +540,8 @@
       <t>
         BoQ Capability Mismatch is sent when a BoQ speaker's configured role doesn't match the QUIC connection, and the connection MUST be terminated after sending this notification. Details are described in <xref target="BoQ Capability"/>.</t>
 
+      <t>
+        For a BoQ speaker, BGP UPDATE messages are only sent in function channels. If there is any error detected when processing an UPDATE message, a NOTIFICATION MUST be sent in the control channel with the error subcode and function channel stream ID. The function channel SHOULD be terminated upon receiving the NOTIFICATION message. The error checking process specified in Section 6.2 of <xref target="RFC4271"/> SHOULD be followed.</t>
       <t>
         The error handling specified in this section is applicable for a BoQ speaker implementing this document.</t>
       <t>
