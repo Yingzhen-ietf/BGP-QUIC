@@ -25,8 +25,8 @@ Table: Mandatory Chanel Attributes
 | Channel Attributes                   | Control Channel | Function Channel |
 | ------------------------------------ | --------------- | -----------------|
 | AcceptConnectionsUnconfiguredPeers   |     Y           |       Y          |
-| AllowAutomaticStart                  |     Y           |       Y          |
-| AllowAutomaticStop                   |     Y           |       Y          |
+| AllowAutomaticStart                  |     Y           |       N          |
+| AllowAutomaticStop                   |     Y           |       N          |
 | CollisionDetectEstablishedState      |     Y           |       N          |
 | DampPeerOscillations                 |     Y           |       Y          |
 | DelayOpen                            |     Y           |       N          |
@@ -52,7 +52,6 @@ AllowAutomaticStart,
 AllowAutomaticStop,
 DampPeerOscillations,
 IdleHoldTime, IdleHoldTimer
-
 Applicability: the control and funtion channels.
 
 Group 2: Unconfigured Peers
@@ -90,7 +89,135 @@ Optional Session Attributes: DelayOpen, DelayOpenTime,
 Applicability: the control channel
 
 ### Adminstrative Events
-        
+
+Event 1: ManualStart
+Definition: Local system administrator manually starts a BoQ channel.
+Status:     Mandatory
+Optional Attribute Status:
+For the control channel, the PassiveQUICEstablishment attribute SHOULD be set to FALSE.
+Applicability: the control and function channels. For the control channel, this means the start of the QUIC connection and the control channel. For a function channel, it is to start the unidirectional channel to the BoQ peer.
+
+Event 2: ManualStop
+Definition: Local system administrator manually stops a BoQ channel.
+Status:     Mandatory
+Optional Attribute Status: No interaction with any optional attributes.
+Applicability: For the control channel, this means to stop the BoQ connection. For a function channel, the default behavior is to stop the unidirectional QUIC stream connection. When an optional parameter is included to inidcate that it is to stop the stream connection, as well as the unidrectional stream (receiving side). In this case, a Cease NOTIFICATION SHOULD be sent to the BoQ peer with Administrative Shutdown subcode. 
+
+Event 3: AutomaticStart
+Definition: Local system automatically starts the BoQ connection.
+Applicability: the control channel
+
+Event 4: ManualStart_with_PassiveQUICEstablishment
+Definition: Local system administrator manually starts the peer
+                     connection, but has PassiveQUICEstablishment
+                     enabled.  The PassiveQUICEstablishment optional
+                     attribute indicates that the peer will listen prior
+                     to establishing the connection.
+Status:     Optional, depending on local system
+Optional Attribute Status: 1) The PassiveQUICEstablishment attribute SHOULD be
+                        set to TRUE if this event occurs.
+                     2) The DampPeerOscillations attribute SHOULD be set
+                        to FALSE when this event occurs.
+Applicability: the control channel
+
+Event 5: AutomaticStart_with_PassiveQUICEstablishment
+Definition: Local system automatically starts the BGP
+                     connection with the PassiveQUICEstablishment
+                     enabled.  The PassiveQUICEstablishment optional
+                     attribute indicates that the peer will listen prior
+                     to establishing a connection.
+
+Status:     Optional, depending on local system
+Optional  Attribute Status: 1) The AllowAutomaticStart attribute SHOULD be set         to TRUE.
+               2) The PassiveTcpEstablishment attribute SHOULD be set to TRUE.
+               3) If the DampPeerOscillations attribute is supported, the DampPeerOscillations SHOULD be set to FALSE.
+Applicability: the control channel
+
+Event 6: AutomaticStart_with_DampPeerOscillations
+Applicability: the control channel
+
+Event 7: AutomaticStart_with_DampPeerOscillations_and_PassiveTcpEstablishment
+Applicability: the control channel
+
+Event 8: AutomaticStop
+Applicability: the control channel
+
+### Timer Events
+Event 9: ConnectRetryTimer_Expires
+Applicability: the control channel
+
+Event 10: HoldTimer_Expires
+Applicability: the control and function channels
+
+Event 11: KeepaliveTimer_Expires
+Applicability: the control and function channels
+
+Event 12: DelayOpenTimer_Expires
+Applicability: the control channel
+
+Event 13: IdleHoldTimer_Expires
+Applicability: the control and function channels
+
+### QUIC Connection-Based Events
+Event 14: QUICConnection_Valid
+Definition: Event indicating the local system reception of a QUIC connection request with a valid source IP address, UDP port, destination IP address, and UDP         Port.  The definition of invalid source and invalid destination IP address is determined by the implementation.
+BGP's destination port SHOULD be port TDB1, Please refer to the IANA Considerations.
+QUIC connection request is denoted by the local system receiving the QUIC Intitial packet.
+Status:     Optional
+Optional Attribute Status:  The TrackQUICState attribute SHOULD be set to
+                        TRUE if this event occurs.
+Applicability: the control channel on the QUIC server
+
+Event 15: QUIC_CR_Invalid
+Applicability: the control channel on the QUIC server
+
+Even 16: QUIC_CR_Acked
+Definition: Event indicating the local system's request to establish a QUIC connection to the remote peer. The local system's QUIC connection sent a QUIC Initial (ClientHello), received a QUIC Initial (ServerHello), and sent a QUIC Ack. When this event is received, the QUIC client has reached the Handshake Complete state.
+Status:     Mandatory
+Applicability: the control channel on the QUIC client
+
+Event 17: QUICConnectionConfirmed
+Definition: Event indicating that the local system has received a confirmation that the QUIC connection has been established by the remote site. This applies to both QUIC client and server, indicating that the Handshake Confirmed state has been reached.
+Status:     Mandatory
+Applicability: the control channel
+
+Event 18: QuicConnectionFails
+Definition: Event indicating that the local system has received a QUIC connection failure notice. It means that an error occurs in the QUIC handshake before the system enters the Handshake Confirmed state.
+Status:     Mandatory
+Applicability: the control channel
+
+### BGP Message-Based Events
+Event 19: BGPOpen
+Applicability: the control and function channels
+
+Event 20: BGPOpen with DelayOpenTimer running
+Applicability: the control channel
+
+Event 21: BGPHeaderErr
+Applicability: the control and function channels
+
+Event 22: BGPOpenMsgErr
+Applicability: the control and function channels
+
+Event 23: OpenCollisionDump
+Applicability: the control and function channels
+
+Event 24: NotifMsgVerErr
+Applicability: the control and function channels
+
+Event 25: NotifMsg
+Applicability: the control and function channels
+
+Event 26: KeepAliveMsg
+Applicability: the control and function channels
+
+Event 27: UpdateMsg
+Applicability: function channels
+
+Event 28: UpdateMsgErr
+Applicability: function channels
+
+
 ## Description of FSM
 
 ### Control Channel
