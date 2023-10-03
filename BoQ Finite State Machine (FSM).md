@@ -220,32 +220,117 @@ Applicability: function channels
 
 ## Description of FSM
 
-### Control Channel
+BoQ MUST maintain a sparate FSM for each BoQ channel. A BoQ implementation will have one FSM for the control channel, plus one FSM for each function channel for each direction. For example between two BoQ speakers, bidirectional IPv4 Unicast AFI/SFI is enabled, as well as a unidirectional FlowSpec. For this case, each BoQ speaker will have 4 FSMs: one for the control channel, plus two for the IPv4 unicast, plus one for the unidirectional FlowSpec.
 
+
+### Terms "active" and "passive"
+??????
+
+### FSM and Collision Detection
+
+For BoQ implementations using sepcifications in this document, there is only one QUIC connection between two BGP peers. Same as what defeined in RFC 4271, when the connection collision occors, it is resolved using the steps defined in section 6.8 of RFC 4271. 
+
+
+### Control Channel FSM
+
+The FSM defined in section 8.2.2 of RFC 4271 still applies to the control channel of a BoQ speaker after the TCP related events and state are replaced with the corresponding QUIC events and state.
+
+The changes and difference are explictly defined below.
+   
+#### Idle state
+
+Initially, the control channel FSM is in the Idle state.  Considering there is only one control channel FSM, hereafter, the control channel FSM will be shorted to BoQ FSM.
+
+In this state, BoQ FSM refuses all incoming BGP connections for this peer.  No resources are allocated to the peer.  In response to a ManualStart event (Event 1) or an AutomaticStart event (Event 3), the local system:
+ 
+ - initializes all BGP resources for the peer connection,
+ - sets ConnectRetryCounter to zero,
+ - starts the ConnectRetryTimer with the initial value,
+ - initiates a QUIC connection to the other BGP peer if the local system is configured as BoQ client or any
+ - listens for a connection that may be initiated by the remote BGP peer, and
+ - changes its state to Connect.
+
+ The ManualStop event (Event 2) and AutomaticStop (Event 8) event are ignored in the Idle state.
+ 
+In response to a ManualStart_with_PassiveTcpEstablishment event
+      (Event 4) or AutomaticStart_with_PassiveTcpEstablishment event
+      (Event 5), the local system:
+      /*?????????*/
+      
+      
 #### Connect State
+In this state, BoQ FSM is waiting for the QUIC connection to be completed.
+
 After a QUIC connection is successfully established, the BoQ speaker sends an OPEN message to its peer and changes it's state to OpenSent.
 
+#### Active State
+
+In this state, BoQ FSM is trying to acquire a peer by listening for, and accepting, a QUIC connection.
+
 #### OpenSent
-A BoQ waits for an OPEN message from its peer. When an OPEN message is received, it's checked for correctness. In case of error, the local BoQ speaker sends a NOTFICATION message, terminates the QUIC connection and changes its state to Idle.
-If there is no error in the OPEN message, the BoQ speaker sends a KEEPALIVE message and sets a KeepAlive timer, and moves it's state to OpenConfirm.
-If a disconnect notification from QUIC or a administrative shutdown is received, the BoQ speaker terminates the BGP/QUIC connection and goes into the Active state.
+BoQ FSM waits for an OPEN message from its peer. 
+
 
 #### OpenConfirm
-Waiting for a KEEPALIVE. When it is received, the BoQ speaker's state moved Established.
-If the HoldTimer expires, the BoQ speaker sends a NOTIFICATION with error code Hold Timer Expired and changes its state to Idle.
-If a NOTIFICATION sent to the control channel is received, it changes its state to IDLE.
-When a BoQ speaker changes its state from OpenConfirm to Idle, it closes both the BGP and QUIC connection.
+BoQ FSM waits for a KEEPALIVE or NOTIFICATION message.
 
 #### Established
-When the control channel reaches established state, it sends NOTIFCATION and KEEPALIVE messages to its peer. (There is no UPDATE message in the control channel)
+In this state, the BoQ FSM can exchange NOTIFICATION, KEEPALIVE and ROUTEREFRESH messages with its peer. 
+There is no UPDATE message in the control channel.
+
+The following text is not applicable to BoQ any more.
+   > One reason for an AutomaticStop event is: A BGP receives an UPDATE
+   messages with a number of prefixes for a given peer such that the
+   total prefixes received exceeds the maximum number of prefixes
+   configured.  The local system automatically disconnects the peer.
+
+When a KEEPALIVE message is received, whether it is destined to the control channel or a function channel, the local system:
+- restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and
+- remains in the Established state.
+
+If the local system receives an UPDATE message, it SHOULD be ignored.
 
 
 ### Function Channel
 
-Function channels can only be created after the control channel has reached Established state. This means the FSM for a function channel starts from the Connect state. 
+Function channels can only be created after the control channel has reached Established state. This means that a funtion channel SHOULD NOT send any QUIC connection related events (14-18).
 
-### Connect State
-After the control channel reaches established state, the BoQ speaker sends an OPEN message to its peer and changes its state for this function channel to OpenSent.
+#### Idle State
+Function channel FSM starts from idle state as well. 
+
+In response to a ManualStart event (Event 1) or an AutomaticStart event (Event 3), the local system:
+  - initializes the function channel BGP resources for the peer connection,
+  - changes its state to Connect.
+
+The ManualStop event (Event 2) and AutomaticStop (Event 8) event are ignored in the Idle state.
+
+If the DampPeerOscillations attribute is set to TRUE, the following two additional events may occur within the Idle state:
+ - AutomaticStart_with_DampPeerOscillations (Event 6),
+ - IdleHoldTimer_Expires (Event 13).
+
+Upon receiving these 2 events, the local system will use these events to prevent peer oscillations.  The method of preventing persistent peer oscillation is outside the scope of this document.
+
+Any other event received in the Idle state does not cause change in the state of the local system.
+
+#### Connect State
+The start events (Events 1, 3-7) are ignored in the Connect state.
+
+In response to a ManualStop event (Event 2), the local system:
+- releases all BGP resources for the channel,
+- changes its state to Idle.
+
+The local system:
+- sends an OPEN message to its peer using a unidirectional QUIC stream,
+- sets the HoldTimer to a large value,
+- changes its state to OpenSent.
+
+If the value of the autonomous system field is the same as the local Autonomous System number, set the connection status to an internal connection; otherwise it will be "external".
+
+If a NOTIFICATION message is received with a version error (Event 24) in the control channel destined to the function channel, the local system:
+- release all BGP resources for the function channel,
+- terminates the function channel/QUIC stream,
+- performs peer oscillation damping if the DampPeerOscillations attribute is set to True, and
+- changes its state to Idle.
 
 ### OpenSent
 A BoQ waits for an OPEN_ACK message from its peer in the control channel with destination stream ID matches its own stream ID. When an OPEN_ACK message is received, it's checked for correctness. In case of error, the local BoQ speaker sends a NOTFICATION message, closes the channel/QUIC stream, and changes its state to Connect
