@@ -159,8 +159,7 @@ Definition: Event indicating the local system reception of a QUIC connection req
 BGP's destination port SHOULD be port TDB1, Please refer to the IANA Considerations.
 QUIC connection request is denoted by the local system receiving the QUIC Intitial packet.
 Status:     Optional
-Optional Attribute Status:  The TrackQUICState attribute SHOULD be set to
-                        TRUE if this event occurs.
+Optional Attribute Status:  The TrackQUICState attribute SHOULD be set to TRUE if this event occurs.
 Applicability: the control channel on the QUIC server
 
 Event 15: QUIC_CR_Invalid
@@ -182,6 +181,7 @@ Status:     Mandatory
 Applicability: the control channel
 
 ### BGP Message-Based Events
+
 Event 19: BGPOpen
 Applicability: the control and function channels
 
@@ -354,7 +354,7 @@ If a NOTIFICATION message is received with a version error (Event 24) in the con
 - changes its state to Idle.
 
 
-### OpenSent
+#### OpenSent
 A BoQ speaker waits for an OPEN_ACK message from its peer in the control channel with destination StreamID matches its own StreamID.
 When an OPEN_ACK message is received, it's checked for correctness. In case of error, the local BoQ speaker:
 - sends a NOTFICATION message
@@ -382,7 +382,7 @@ In response to any other event (Events 11, 13, 25-28), the local system:
 - (optionally) performs peer oscillation damping if the  DampPeerOscillations attribute is set to TRUE, and
 - changes its state to Idle.
 
-### OpenConfirm
+#### OpenConfirm
 Waiting for a KEEPALIVE. When it is received in the control channel with matcing StreamID, the BoQ speaker's state moved Established.
 If the HoldTimer expires, the BoQ speaker sends a NOTIFICATION with error code Hold Timer Expired and terminates the channel.
 If a NOTIFICATION sent to the control channel with the matching destination StreamID is received, it closes the channel.
@@ -413,7 +413,7 @@ If the local system receives a KEEPALIVE message (KeepAliveMsg (Event 26)) from 
 - restarts the HoldTimer and
 - changes its state to Established.
 
-### Established
+#### Established
 When the sending function channel reaches established state, it sends UPDATE, NOTIFCATION and KEEPALIVE messages to its peer.
 
 In response to a ManualStop event (initiated by an operator)(Event 2), the local system:
