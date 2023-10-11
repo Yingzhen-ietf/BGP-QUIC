@@ -2,10 +2,6 @@
 
 The data structures and FSM described in this document are conceptual and do not have to be implemented precisely as described here, as long as the implementations support the described functionality and they exhibit the same externally visible behavior.
 
-<!--- 
-The specification of the FSM should not be normative.
---->
-   
 A BoQ implementation is expected to maintian a separate FSM for each channel. The control channel in a BoQ connection is required to reach the Established state before any function channel can be created. This means the set up of the QUIC connection and any related errors are processed by the control channel.
 
 The BGP messages and events handled by the control channel and function channels are different. In general, what is specified in RFC 4271 section 8 that applies to a BGP peer connection is applicable to a BoQ channel unless explicitly specified in this document.
@@ -33,7 +29,7 @@ For the Function Channel, I changed ConnectRetryCounter to "Y" because it is app
 
 ConnectRetryCounter doesn't make sense on the send side of a Function Channel.
 
-The ConnectRetryTimer/ConnectRetryTime make sense in the send side of the Function Channel.  rfc4271 talks about these times as related to the TCP session -- in BoQ, the QUIC connection is already up so these attributes apply to the stream setup.  At least that's what my assumption is: set the QUIC connention and *then* start BGP.  (Even though the QUIC connection is set up in response to starting BGP.)
+The ConnectRetryTimer/ConnectRetryTime make sense in the send side of the Function Channel.  rfc4271 talks about these times as related to the TCP session -- in BoQ, the QUIC connection is already up so these attributes apply to the stream setup.
 
 Do we need to expand the table to indicate the send/receive separation?
  --->
@@ -43,13 +39,9 @@ For a BoQ function channel, a new mandatory attribute StreamID is required.  Thi
 ```md
 | Channel Attributes                   | Control Channel | Function Channel |
 | ------------------------------------ | --------------- | -----------------|
-| AcceptConnectionsUnconfiguredPeers   |     N           |       N          |
+| AcceptConnectionsUnconfiguredPeers   |     Y           |       N          |
 <!--- 
-AcceptConnectionsUnconfiguredPeers doesn't apply to any channel because the QUIC connection is already up.  
-
-Again, my assumption is that bringing up the QUIC connection is independent of the channels.  However, it makes me think that we might need an FSM for the QUIC conection to include all the transport parameters.
-
-There are two ways to look at this: the channels are set up *after* the QUIC connection, or, the control channel is set up *with* the QUIC connection (so the FSM includes and QUIC-specific stuff).  I'm assuming the first option, but the second would allow us to not have to worry about having function channels up if no control channel exists.
+AcceptConnectionsUnconfiguredPeers doesn't apply to the function channel because the QUIC connection is already up.  
 --->
 | AllowAutomaticStart                  |     Y           |       Y          |
 | AllowAutomaticStop                   |     Y           |       Y          |
@@ -57,23 +49,18 @@ There are two ways to look at this: the channels are set up *after* the QUIC con
 We should be able to srart/stop specific AFs at any time, based on "implementation-specific" logic.
 --->
 | CollisionDetectEstablishedState      |     Y           |       N          |
-<!--- 
-This one also goes back to the assuptions on the coupling (or not) with the transport session.  Later in this document it says that collisions only exist at the QUIC connection level...
-
-However, once the QUIC connection is up and a control channel has been established, it is still possible for one of the speakers to try to initiate a new control channel.
---->
 | DampPeerOscillations                 |     Y           |       Y          |
 | DelayOpen                            |     Y           |       N          |
 | DelayOpenTime                        |     Y           |       N          |
 | DelayOpenTimer                       |     Y           |       N          |
 | IdleHoldTime                         |     Y           |       Y          |
 | IdleHoldTimer                        |     Y           |       Y          |
-| PassiveQUICEstablishment             |     N           |       N          |    
+| PassiveQUICEstablishment             |     Y           |       N          |    
+| SendNOTIFICATIONwithoutOPEN          |     Y           |       Y (receive)|
 <!--- 
-But PassiveControlEstablishment would apply to the control channel.
+The receive side of the function channel should be able to send a NOTIFICATION without sending an OPEN first.
 --->
-| SendNOTIFICATIONwithoutOPEN          |     Y           |       Y          |
-| TrackQUICState                       |     N           |       N          |
+| TrackQUICState                       |     Y           |       N          |
 
 Table: Optional Chanel Attributes
 ```
