@@ -438,6 +438,8 @@ If the local system receives a KEEPALIVE message (KeepAliveMsg (Event 26)) from 
 #### Established
 When the sending function channel reaches established state, it sends UPDATE, NOTIFCATION and KEEPALIVE messages to its peer.
 
+Any Start event (Events 1, 3, 6) is ignored in the Established state.
+
 In response to a ManualStop event (initiated by an operator)(Event 2), the local system:
 
 - sends the NOTIFICATION message with a Cease,
@@ -445,3 +447,171 @@ In response to a ManualStop event (initiated by an operator)(Event 2), the local
 - releases related BGP resources,
 - drops the stream/channel connection,
 - changes its state to Idle.
+
+In response to an AutomaticStop event (Event 8), the local system:
+
+- sends a NOTIFICATION with a Cease,
+- deletes all routes associated with this connection,
+- releases related BGP resources,
+- drops the stream/channel connection,
+- (optionally) performs peer oscillation damping if the DampPeerOscillations attribute is set to TRUE, and
+- changes its state to Idle.
+
+If the HoldTimer_Expires event occurs (Event 10), the local system:
+- sends a NOTIFICATION message with the Error Code Hold Timer Expired,
+- releases related BGP resources,
+- drops the stream/channel connection,
+- (optionally) performs peer oscillation damping if the DampPeerOscillations attribute is set to TRUE, and
+- changes its state to Idle.
+
+If the KeepaliveTimer_Expires event occurs (Event 11), the local system:
+- sends a KEEPALIVE message, and
+- restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.
+
+Each time the local system sends a KEEPALIVE or UPDATE message, it restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.
+
+Any QUIC event (Event 14-17) received SHOULD be ignored.
+
+If the local system receives a NOTIFICATION message (Event 24 or 25) from the control channel with matching StreamID, the local system:
+
+ - deletes all routes associated with this AFI/SAFI,
+ - releases the related BGP resources,
+ - drops the stream/channel connection,
+ - changes its state to Idle.
+
+If the local system receives a KEEPALIVE message (Event 26) in the control channel with matching StreamID, the local system:
+- restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and
+- remains in the Established state.
+
+A functon channel is unidirecitonal, it SHOULD NOT receive any UPDATE message from the control channel with matching StreamID. In case an UPDATE message is received, it SHOULD be ignored.
+
+### Funtion Channel Receiving FSM
+
+In BoQ, function channels are unidirectional, hence after the control channel reaches established state, as the receiving side a BoQ speaker doesn't know what function channels will be created by its peer. A BoQ implementation is suggested to have a central process or thread to handle BGP packets received from its peer in function channels that don't have receiving FSMs yet, we can call this the packet dispatcher.
+This despatcher SHOULD only handle OPEN messages received from its BoQ peer, any other BGP messages SHOULD be ignored.
+When an OPEN message is received by the dispatcher, and there is no receiving FSM created for the funtion channel, a funtion chanel receiving FSM SHOULD be created to handle packets from the stream. For example, when an OPEN packet for IPv6 Unicast is received on stream #2, and no receiving FSM for IPv6 unicast exists, a receiving FSM SHOULD be created for IPv6 unicast, and the StreamID should be set to 2. When a receiving FSM for IPv6 Unicast with different StreamID already exists, a NOTIFICATION with BoQ error code, BoQ channel conflict subcode SHOULD be sent in the control channel (see section 5.2). 
+
+#### Idle State
+After a function channel receiving FSM is created, it starts from the Idle state.
+
+In this state, the local system:
+- initialize related BGP resources for the peer connection for the AFI/SAFI
+- changes its state to Connect.
+
+The ManualStop event (Event 2) and AutomaticStop (Event 8) event are ignored in the Idle state.
+
+#### Connect State
+In this state, the function channel receiving FSM process the received OPEN message, if there is no error in the OPEN message, the local system:
+- sends an OPEN message in the control channel as acknowledgement with the StreamID,
+- sends a KEEPALIVE message in the control channel,
+- if the HoldTimer initial value is non-zero,
+  - starts the KeepaliveTimer with the initial value and
+  - resets the HoldTimer to the negotiated value,
+
+  else, if the HoldTimer initial value is zero,
+  - resets the KeepaliveTimer and
+  - resets the HoldTimer value to zero,
+- and changes its state to OpenConfirm.
+
+If BGP message header checking (Event 21) or OPEN message checking detects an error (Event 22), the local system:
+- (optionally) If the SendNOTIFICATIONwithoutOPEN attribute is set to TRUE, then the local system first sends a NOTIFICATION message with the appropriate error code, and then
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+If a NOTIFICATION message is received with a version error (Event 24), the local system:
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+In response to any other events (Events 8, 10-11, 13, 19, 23, 25-28), the local system:
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+#### OpenConfirm State
+
+In the state, the receiving FSM wait for a KEEPALIVE or NOTIFICATION message.
+
+Any start event (Events 1, 3-7) is ignored in the OpenConfirm state.
+
+In response to a ManualStop event (Event 2) initiated by the oerator or the AutomaticStop event initiated by the system (Event 8), the local system:
+- sends the NOTIFICATION message with a Cease in the control channel,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+If the HoldTimer_Expires event (Event 10) occurs before a KEEPALIVE message is received, the local system:
+- sends the NOTIFICATION message with the Error Code Hold Timer Expired,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+If the local system receives a KeepaliveTimer_Expires event (Event 11), the local system:
+- sends a KEEPALIVE message in the control channel,
+- restarts the KeepaliveTimer, and
+- remains in the OpenConfirmed state.
+
+If the local system receives a NOTIFICATION message with a version error (NotifMsgVerErr (Event 24)), the local system:
+- restarts the KeepaliveTimer, and
+- remains in the OpenConfirmed state.
+
+If a valide OPEN message is received on the same stream, it SHOULD be ignored.
+
+If an OPEN message is received with error,  (BGPHeaderErr (Event 21)or BGPOpenMsgErr (Event 22)), the local system:
+- sends a NOTIFICATION message with the appropriate error code in the control channel,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+If the local system receives a KEEPALIVE message (KeepAliveMsg (Event 26)), the local system:
+- restarts the HoldTimer and
+- changes its state to Established.
+
+In response to any other event (Events 9, 12-13, 20, 27-28), the local system:
+
+- sends a NOTIFICATION with a code of Finite State Machine Error,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+#### Established State
+In the Established state, a function channel receiving FSM can receive UPDATE, NOTIFICATION, and KEEPALIVE messages from its peer.
+
+Any Start event (Events 1, 3-7) is ignored in the Established state.
+
+In response to a ManualStop event (initiated by an operator) (Event 2), or an AutomaticStop event (Event 8), the local system:
+- sends the NOTIFICATION message with a Cease in the control channel,
+- deletes all routes associated with this connection,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+If the HoldTimer_Expires event occurs (Event 10), the local system:
+- sends a NOTIFICATION message with the Error Code Hold Timer Expired in the control channel,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+If the KeepaliveTimer_Expires event occurs (Event 11), the local system:
+- sends a KEEPALIVE message in the control channel, and
+- restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.
+
+Each time the local system sends a KEEPALIVE in the control channel, it restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.
+
+If the local system receives a NOTIFICATION message (Event 24 or Event 25), the local system:
+- deletes all routes associated with this connection,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+If the local system receives a KEEPALIVE message (Event 26), the local system:
+ - restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and
+ - remains in the Established state.
+
+If the local system receives an UPDATE message (Event 27), the local system:
+- processes the message,
+- restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and
+- remains in the Established state.
+
+If an UPDATE message is received with error (Event 28), the lcoal system:
+- sends a NOTIFICATION message with an Update error,
+- deletes all routes associated with this connection,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
+
+In response to any other event (Events 9, 12-13, 20-22), the local system:
+- sends a NOTIFICATION message with the Error Code Finite State Machine Error,
+- deletes all routes associated with this connection,
+- releases all related BGP resources,
+- delete the function channel receiving FSM.
