@@ -2,11 +2,11 @@
 
 The data structures and FSM described in this document are conceptual and do not have to be implemented precisely as described here, as long as the implementations support the described functionality and they exhibit the same externally visible behavior.
 
-A BoQ implementation is expected to maintian a separate FSM for each channel. The control channel in a BoQ connection is required to reach the Established state before any function channel can be created. This means the set up of the QUIC connection and any related errors are processed by the control channel.
+A BoQ implementation is expected to maintain a separate FSM for each channel. The control channel in a BoQ connection is required to reach the Established state before any function channel can be created. This means the setup of the QUIC connection and any related errors are processed by the control channel.
 
-The BGP messages and events handled by the control channel and function channels are different. In general, what is specified in RFC 4271 section 8 that applies to a BGP peer connection is applicable to a BoQ channel unless explicitly specified in this document.
+The BGP messages and events handled by the control and function channels vary. In general, what is specified in RFC 4271 section 8 that applies to a BGP peer connection is applicable to a BoQ channel unless explicitly specified in this document.
 
-RFC 4271 section 8 defines the mandatory and optional session attributes for each connection. For a BoQ implementation, some of these attributes are applicable to both the control channel and function channels, however there are some attributes that are applicable to only to the control channel or  funtion channels. The following tables list applicability of each attribute.
+RFC 4271 section 8 defines the mandatory and optional session attributes for each connection. For a BoQ implementation, some of these attributes are applicable to both the control and function channels. However some attributes only apply to the control or function channels. The following tables list the applicability of each attribute.
 
 ```md
 | Channel Attributes | Control Channel | Function Channel |
@@ -68,7 +68,9 @@ Table: Optional Chanel Attributes
 ## Events for the BoQ FSM
 
 ### Optional Events
-Same as defined in RFC 4271, BoQ events can either be mandatory or optional. 
+The Inputs to the BGP FSM are events.  Events can either be mandatory or optional.  Some optional events are linked to optional session attributes.  Optional session attributes enable several groups of FSM functionality.
+
+The linkage between FSM functionality, events, and the optional session attributes are as described in RFC4271, Section 8.1.1.  Any updates of deviations are indicated below, and the applicability is summarized in the tables above. 
 
 Group 1: Automatic Administrative Events (start/Stop)
 Optional Channel Attributes:
@@ -76,11 +78,11 @@ AllowAutomaticStart,
 AllowAutomaticStop,
 DampPeerOscillations,
 IdleHoldTime, IdleHoldTimer
-Applicability: the control and funtion channels.
+
 
 Group 2: Unconfigured Peers
 Optional Channel Attributes: AcceptConnectionsUnconfiguredPeers
-Applicability: the control and funtion channels
+
 
 The TCP procssing is updated to be QUIC processing as the following.
 Group 3: QUIC processing
@@ -91,19 +93,16 @@ TrackQUICState
 Option 1: PassiveQUICEstablishment
 Description: This option indicated that the BoQ FSM will passivley wait for the remote BGP peer to establish the BGP QUIC connecton. As specified in <Section 5.1>, a BoQ speaker's role can be a QUIC client, a QUIC server, or any. If a BoQ speaker is configured as a QUIC client, the PassiveQUICEstablishment MUST be set to FALSE; when a BoQ speaker is configured as a QUIC server, the PassiveQUICEstablishment MUST be set to TRUE. 
 Value: TURE or FALSE
-Applicability: the control channel
 
 Option 2: TrackQUICState
 Description: The BoQ FSM normally tracks the end result of a QUIC connection attempt rather than individual QUIC messages. Optionally, the BoQ FSM can support additional interaction with the QUIC connection negotiation.  The interaction with the QUIC events may increase the amount of logging the BGP peer connection requires and the number of BoQ FSM changes.
 Value: TRUE or FALSE
-Applicability: the control channel
 
 Group 4: BGP Message Processing
 Optional Session Attributes: DelayOpen, DelayOpenTime,
                                       DelayOpenTimer,
                                       SendNOTIFICATIONwithoutOPEN,
                                       CollisionDetectEstablishedState
-Applicability: the control channel
 
 ### Adminstrative Events
 
