@@ -43,7 +43,7 @@ For a BoQ function channel, a new mandatory attribute StreamID is required.  Thi
 <!--- 
 AcceptConnectionsUnconfiguredPeers doesn't apply to the function channel because the QUIC connection is already up.  
 --->
-| AllowAutomaticStart                  |     Y           |       Y          |
+| AllowAutomaticStart                  |     Y           |       Y (send)   |
 | AllowAutomaticStop                   |     Y           |       Y          |
 <!--- 
 We should be able to srart/stop specific AFs at any time, based on "implementation-specific" logic.
@@ -105,58 +105,92 @@ Optional Session Attributes: DelayOpen, DelayOpenTime,
                                       CollisionDetectEstablishedState
 
 ### Adminstrative Events
+An administrative event is an event in which the operator interface and BGP Policy engine signal the BoQ FSM to start or stop the BGP state machine.  The basic start and stop indications are augmented by optional connection attributes that signal a certain type of start or stop mechanism to the BoQ FSM.
+
+The settings of optional session attributes may be implicit in some implementations, and therefore may not be set explicitly by an external operator action. The administrative states described below may also be implicit in some implementations and not directly configurable by an external operator.
 
 Event 1: ManualStart
-Definition: Local system administrator manually starts a BoQ channel.
+Definition: Local system administrator manually starts a BoQ channel. For the control channel, this event indicates the start of the QUIC connection and the control channel. For a function channel, it is to start an unidirectional channel to the BoQ peer.
 Status:     Mandatory
 Optional Attribute Status:
 For the control channel, the PassiveQUICEstablishment attribute SHOULD be set to FALSE.
-Applicability: the control and function channels. For the control channel, this means the start of the QUIC connection and the control channel. For a function channel, it is to start the unidirectional channel to the BoQ peer.
 
 Event 2: ManualStop
-Definition: Local system administrator manually stops a BoQ channel.
+Definition: Local system administrator manually stops a BoQ channel. For the control channel, this event indicates the end of the BoQ connection.
 Status:     Mandatory
 Optional Attribute Status: No interaction with any optional attributes.
-Applicability: For the control channel, this means to stop the BoQ connection. For a function channel, the default behavior is to stop the unidirectional QUIC stream connection. When an optional parameter is included to inidcate that it is to stop the stream connection, as well as the unidrectional stream (receiving side). In this case, a Cease NOTIFICATION SHOULD be sent to the BoQ peer with Administrative Shutdown subcode. 
 
 Event 3: AutomaticStart
-Definition: Local system automatically starts the BoQ connection.
-Applicability: the control channel
+Definition: Local system automatically starts a BoQ channel. For the control channel, this event indicates the start of the QUIC connection and the control channel. For a function channel, it is to start an unidirectional channel to the BoQ peer.
+Status:     Optional
+Optional Attribute Status: 1) The AllowAutomaticStart attribute SHOULD be set to TRUE if this event occurs.
+                           2) If the PassiveQUICEstablishment optional session attribute is supported, it SHOULD be set to FALSE.
+                           3) If the DampPeerOscillations optional session attribute is supported, it SHOULD be set to FALSE when this event occurs.
 
 Event 4: ManualStart_with_PassiveQUICEstablishment
 Definition: Local system administrator manually starts the peer
                      connection, but has PassiveQUICEstablishment
                      enabled.  The PassiveQUICEstablishment optional
                      attribute indicates that the peer will listen prior
-                     to establishing the connection.
-Status:     Optional, depending on local system
+                     to establishing the connection. This event only applies to the control channel.
+Status:     Optional
 Optional Attribute Status: 1) The PassiveQUICEstablishment attribute SHOULD be
                         set to TRUE if this event occurs.
                      2) The DampPeerOscillations attribute SHOULD be set
                         to FALSE when this event occurs.
-Applicability: the control channel
 
 Event 5: AutomaticStart_with_PassiveQUICEstablishment
 Definition: Local system automatically starts the BGP
                      connection with the PassiveQUICEstablishment
                      enabled.  The PassiveQUICEstablishment optional
                      attribute indicates that the peer will listen prior
-                     to establishing a connection.
-
-Status:     Optional, depending on local system
-Optional  Attribute Status: 1) The AllowAutomaticStart attribute SHOULD be set         to TRUE.
+                     to establishing a connection. This event only applies to the control channel.
+Status:     Optional
+Optional  Attribute Status: 1) The AllowAutomaticStart attribute SHOULD be set to TRUE.
                2) The PassiveTcpEstablishment attribute SHOULD be set to TRUE.
                3) If the DampPeerOscillations attribute is supported, the DampPeerOscillations SHOULD be set to FALSE.
-Applicability: the control channel
 
 Event 6: AutomaticStart_with_DampPeerOscillations
-Applicability: the control channel
+Definition: Local system automatically starts the BGP peer
+            connection with peer oscillation damping enabled.
+            The exact method of damping persistent peer
+            oscillations is determined by the implementation
+            and is outside the scope of this document.
 
-Event 7: AutomaticStart_with_DampPeerOscillations_and_PassiveTcpEstablishment
-Applicability: the control channel
+Status:     Optional
+
+Optional Attribute Status:     1) The AllowAutomaticStart attribute SHOULD be set to TRUE.
+                     2) The DampPeerOscillations attribute SHOULD be set to TRUE.
+                     3) The PassiveQUICEstablishment attribute SHOULD be set to FALSE.
+<!---
+For function channels...  AutomaticStart only applies in the send direction.
+
+DampPeerOscillations should apply in both directions. 
+--->
+
+Event 7: AutomaticStart_with_DampPeerOscillations_and_PassiveQUICEstablishment
+Definition: Local system automatically starts the BGP peer
+                     connection with peer oscillation damping enabled
+                     and PassiveQUICEstablishment enabled.  The exact
+                     method of damping persistent peer oscillations is
+                     determined by the implementation and is outside the
+                     scope of this document. This event only applies to the control channel.
+
+Status:     Optional
+
+Optional Attributes Status:     1) The AllowAutomaticStart attribute SHOULD be set to TRUE.
+                     2) The DampPeerOscillations attribute SHOULD be set to TRUE.
+                     3) The PassiveQUICEstablishment attribute SHOULD be set to TRUE.
+
 
 Event 8: AutomaticStop
-Applicability: the control channel
+Definition: Local system automatically stops a BoQ channel. For the control channel, this event indicates the end of the BoQ connection.
+
+An example of an automatic stop event for a function channel is exceeding the number of prefixes for a given peer and the local system automatically disconnecting the peer.
+
+Status:     Optional
+
+Optional Attribute Status:     1) The AllowAutomaticStop attribute SHOULD be TRUE.
 
 ### Timer Events
 Event 9: ConnectRetryTimer_Expires
