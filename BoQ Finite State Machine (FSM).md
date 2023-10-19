@@ -193,47 +193,50 @@ Status:     Optional
 Optional Attribute Status:     1) The AllowAutomaticStop attribute SHOULD be TRUE.
 
 ### Timer Events
-Event 9: ConnectRetryTimer_Expires
-Applicability: the control channel
-
-Event 10: HoldTimer_Expires
-Applicability: the control and function channels
-
-Event 11: KeepaliveTimer_Expires
-Applicability: the control and function channels
-
-Event 12: DelayOpenTimer_Expires
-Applicability: the control channel
-
-Event 13: IdleHoldTimer_Expires
-Applicability: the control and function channels
+The definition of events 9 through 11 are the same as in Section 8.1.3 of RFC 4271.
 
 ### QUIC Connection-Based Events
 Event 14: QUICConnection_Valid
-Definition: Event indicating the local system reception of a QUIC connection request with a valid source IP address, UDP port, destination IP address, and UDP         Port.  The definition of invalid source and invalid destination IP address is determined by the implementation.
-BGP's destination port SHOULD be port TDB1, Please refer to the IANA Considerations.
-QUIC connection request is denoted by the local system receiving the QUIC Intitial packet.
+Definition: Event indicating the local system reception of a QUIC connection request with a valid source IP address, UDP port, destination IP address, and UDP Port.  The definition of invalid source and invalid destination IP address is determined by the implementation.
+BoQ's destination port SHOULD be port TDB1 (Section 4.1).
+A QUIC connection request is denoted by the local system receiving the QUIC Intitial packet [RFC9000].
 Status:     Optional
 Optional Attribute Status:  The TrackQUICState attribute SHOULD be set to TRUE if this event occurs.
-Applicability: the control channel on the QUIC server
 
 Event 15: QUIC_CR_Invalid
+    Definition: Event indicating the local system reception of a
+                     QUIC connection request with either an invalid
+                     source address or port number, or an invalid
+                     destination address or port number.
+
+                     BOQ's destination port number SHOULD be TBD1 (Section 4.1).
+
+                     A QUIC connection request occurs when the local
+                     system receives a QUIC Initial packet [RFC9000].
+
+         Status:     Optional
+
+         Optional
+         Attribute
+         Status:     1) The TrackTcpState attribute should be set to
+                        TRUE if this event occurs.
+
 Applicability: the control channel on the QUIC server
 
 Even 16: QUIC_CR_Acked
-Definition: Event indicating the local system's request to establish a QUIC connection to the remote peer. The local system's QUIC connection sent a QUIC Initial (ClientHello), received a QUIC Initial (ServerHello), and sent a QUIC Ack. When this event is received, the QUIC client has reached the Handshake Complete state.
+Definition: Event indicating the local system's request to establish a QUIC connection to the remote peer has been completed. 
+The local system's QUIC connection request has completed and a HANDSHAKE_DONE frame is recieved [RFC9000].
 Status:     Mandatory
-Applicability: the control channel on the QUIC client
 
 Event 17: QUICConnectionConfirmed
-Definition: Event indicating that the local system has received a confirmation that the QUIC connection has been established by the remote site. This applies to both QUIC client and server, indicating that the Handshake Confirmed state has been reached.
+Definition: Event indicating that the local system has received a confirmation that the QUIC connection has been established by the remote site. 
+The HANDSHAKE_DONE frame has been acknowledged [RFC9000].
 Status:     Mandatory
-Applicability: the control channel
 
-Event 18: QuicConnectionFails
-Definition: Event indicating that the local system has received a QUIC connection failure notice. It means that an error occurs in the QUIC handshake before the system enters the Handshake Confirmed state.
+Event 18: QUICConnectionFails
+Definition: Event indicating that the local system has received a QUIC connection failure notice. 
+The local peer has received a QUIC CONNECTION_CLOSE frame [RFC9000].
 Status:     Mandatory
-Applicability: the control channel
 
 ### BGP Message-Based Events
 
