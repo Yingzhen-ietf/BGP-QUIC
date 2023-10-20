@@ -49,12 +49,12 @@ AcceptConnectionsUnconfiguredPeers doesn't apply to the function channel because
 We should be able to srart/stop specific AFs at any time, based on "implementation-specific" logic.
 --->
 | CollisionDetectEstablishedState      |     Y           |       N          |
-| DampPeerOscillations                 |     Y           |       Y          |
+| DampPeerOscillations                 |     Y           |       Y  (sending only)        |
 | DelayOpen                            |     Y           |       N          |
 | DelayOpenTime                        |     Y           |       N          |
 | DelayOpenTimer                       |     Y           |       N          |
-| IdleHoldTime                         |     Y           |       Y          |
-| IdleHoldTimer                        |     Y           |       Y          |
+| IdleHoldTime                         |     Y           |       Y   (sending only)       |
+| IdleHoldTimer                        |     Y           |       Y   (sending only)       |
 | PassiveQUICEstablishment             |     Y           |       N          |    
 | SendNOTIFICATIONwithoutOPEN          |     Y           |       Y (receive)|
 <!--- 
