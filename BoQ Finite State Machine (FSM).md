@@ -240,51 +240,20 @@ Status:     Mandatory
 
 ### BGP Message-Based Events
 
-Event 19: BGPOpen
-Applicability: the control and function channels
-
-Event 20: BGPOpen with DelayOpenTimer running
-Applicability: the control channel
-
-Event 21: BGPHeaderErr
-Applicability: the control and function channels
-
-Event 22: BGPOpenMsgErr
-Applicability: the control and function channels
-
-Event 23: OpenCollisionDump
-Applicability: the control and function channels
-
-Event 24: NotifMsgVerErr
-Applicability: the control and function channels
-
-Event 25: NotifMsg
-Applicability: the control and function channels
-
-Event 26: KeepAliveMsg
-Applicability: the control and function channels
-
-Event 27: UpdateMsg
-Applicability: function channels
-
-Event 28: UpdateMsgErr
-Applicability: function channels
+The definition of events 19 through 28 is the same as in Section 8.1.5 of RFC 4271.
 
 
 ## Description of FSM
 
-BoQ MUST maintain a sparate FSM for each BoQ channel. A BoQ implementation will have one FSM for the control channel, plus one FSM for each function channel for each direction. For example between two BoQ speakers, bidirectional IPv4 Unicast AFI/SFI is enabled, as well as a unidirectional FlowSpec. For this case, each BoQ speaker will have 4 FSMs: one for the control channel, plus two for the IPv4 unicast, plus one for the unidirectional FlowSpec.
+BoQ implementations are expected to maintain a sparate FSM for each BoQ channel. As described later in this section, a BoQ implementation will have one FSM for the control channel, plus one FSM for each direction of a function channel. For example, two BoQ speakers configured to advertise IPv6 routes in both directions will have 3 active FSMs: one for the control channel, and one for each direction (send and receive) of the IPv6 route exchange.
 
 
 ### Terms "active" and "passive"
-For BGP over TCP, once the TCP connection is completed, it doesn't matter which end was active and which was passive. Please refer to <RFC 4271 section 8.2.1.1>.
-
-However, in a BoQ implementation, because QUIC supports connection migration, and only the client side can move. The role of the BoQ speaker is significant. Please refer to <section 5.1> for role configurations.
+There is only one active side and one passive side to any one QUIC connection. In BoQ, the distinction is significant and they correspond to the QUIC client and server roles.  Refer to <Section 5.1> for more details.,
 
 ### FSM and Collision Detection
 
-For BoQ implementations using sepcifications in this document, there is only one QUIC connection between two BGP peers. Same as what defined in RFC 4271, when the connection collision occors, it is resolved using the steps defined in section 6.8 of RFC 4271. 
-
+There is one control clannel FSM (Section x) per BoQ connection. When a connection collision occurs prior to determining what peer a connection is associated with, there may be two connections for one peer. Connection collisions are resolved using the specification in Section 6.8 of RFC 4271. After the connection collision is resolved, the FSM for the connection that is closed SHOULD be disposed.  
 
 ### Control Channel FSM
 
