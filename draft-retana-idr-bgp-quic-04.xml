@@ -166,19 +166,19 @@
         <t>
           Before two BoQ speakers start exchanging routing information, they must establish a BGP session. It is established in two phases:
           <ul>
-            <li>Establish a transport layer connection. TLS 1.3 is integrated with QUIC. The TLS authentication parameters used for this connection are out of the scope of this draft. </li>
+            <li>Establish a transport layer connection. TLS 1.3 is integrated with QUIC. The TLS authentication parameters used for this connection are out of the scope of this document. </li>
             <li>Establish a BoQ session over this transport connection. This document specifies the details of such an operation.</li>
           </ul></t>
         <t>
           QUIC connections are established as described in <xref target="RFC9000"/>.  During connection establishment, a BoQ speaker SHOULD use UDP port TBD1 and MUST select the Application-Layer Protocol Negotiation (ALPN) <xref target="RFC7301"/> token "boq" in the TLS handshake.  Support for other application-layer protocols MUST NOT be offered in the same handshake. A connection MUST be closed if the ALPN token is not as indicated or if other application-layer protocols are offered in the same handshake.</t>
         <t>
-          <xref target="RFC4271"/> defines the operations for a single BGP session between two BGP speakers using TCP.  This document defines the ability to carry BGP over multiple QUIC streams as "BGP channels".</t>
+          <xref target="RFC4271"/> defines the operations for a single BGP session between two BGP speakers using TCP.  This document defines the ability to carry BGP messages over multiple QUIC streams as "BGP channels".</t>
         <t>
-          On a BoQ connection, the BoQ speaker first establishes a bidirectional stream for the "BGP control channel".  The control channel is used to establish a BGP peer relationship between two BoQ speakers, similar to RFC 4271.  OPEN messages are exchanged on the control channel, and if the BoQ session parameters are acceptable, the peering session is established.  Similar to RFC 4271, the BoQ session is terminated with a NOTIFICATION message if the parameters are unacceptable.</t>
+          On a BoQ connection, the BoQ speaker first establishes a bidirectional stream for the "BGP control channel".  Similar to <xref target="RFC4271"/>, the control channel is used to establish a BGP peer relationship between two BoQ speakers.  OPEN messages are exchanged on the control channel, and if the BoQ session parameters are acceptable, the peering session is established.  The BoQ session is terminated with a NOTIFICATION message if the parameters are unacceptable.</t>
         <t>
-          After establishing the control channel, each BoQ speaker may create function channels using unidirectional QUIC streams.  These function channels are used to carry BGP routes for a specific AFI/SAFI.  Only one function channel per AFI/SAFI can exist from one BoQ speaker to another (see <xref target="channel collision"/>. Unlike <xref target="RFC4271"/> BGP, there is no requirement for both BoQ speakers to have a symmetric and matching set of function channels.</t>
+          After establishing the control channel, each BoQ speaker may create function channels using unidirectional QUIC streams.  These function channels are used to carry BGP routes for a specific AFI/SAFI.  Only one function channel per AFI/SAFI can exist from one BoQ speaker to another (see <xref target="channel collision"/>). Unlike the requirement in <xref target="RFC4271"/> and <xref target="RFC4760"/>, there is no need for both BoQ speakers to have a symmetric and matching set of function channels.</t>
         <t>
-          BGP channels largely use the mechanisms of the RFC 4271 Finite State Machine (FSM) for their establishment. For the control channel carried over a bidirectional QUIC stream, the FSM is identical to the RFC 4271 FSM.  However, since the function channels are unidirectional, the RFC 4271 FSM procedures cannot be carried out solely using the unidirectional channel from one BoQ speaker to another.  Instead, the responding BoQ speaker must carry its replies for the unidirectional streams over the control channel and address them to a specific BGP function channel.</t>        
+          BoQ channels largely use the mechanisms of the <xref target="RFC4271"/> Finite State Machine (FSM) for their establishment. For the control channel carried over a bidirectional QUIC stream, the FSM is identical.  However, since the function channels are unidirectional, the FSM procedures cannot be carried out solely using the unidirectional channel from one BoQ speaker to another.  Instead, the responding BoQ speaker must carry its replies for the unidirectional streams over the control channel and address them to a specific BGP function channel.</t>        
       </section>
 
       <section title="Establish BGP/QUIC Control Channel">
