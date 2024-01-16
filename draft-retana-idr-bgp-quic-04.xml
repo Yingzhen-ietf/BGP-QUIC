@@ -98,8 +98,14 @@
     <workgroup>IDR Workgroup</workgroup>
     <abstract>
       <t>
-        This document specifies the use of QUIC Streams to support multiple BGP
-        sessions over one connection in order to achieve high resiliency.
+        This document specifies the procedures for BGP to use QUIC as a 
+        transport protocol with a mechanism to carry Network Layer 
+        protocols (AFI/SAFI) over individual streams. These 
+        per-AFI/SAFI streams (function channels) and the associated 
+        control mechanism (control channel) for the session are called 
+        "BGP channels". In one BGP over QUIC (BoQ) connection, one 
+        control channel and one or more function channels are used to 
+        carry routing information.
       </t>
     </abstract>
   </front>
