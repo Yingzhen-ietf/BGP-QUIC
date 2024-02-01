@@ -243,9 +243,9 @@
         <t>
           QUIC supports connection migration. However, only the client side can move. For a BoQ speaker to take advantage of the QUIC connection migration capability, it has to be the QUIC client.</t>
         <t>
-          For an implementation of the BoQ defined in this document, an explicit configuration is needed to identify a BoQ speaker's role: a QUIC client, a QUIC server, or any (Don’t care). The default value can be "any"; other values MUST be explicitly configured.</t>
+          For an implementation of BoQ as defined in this document, an explicit configuration is needed to identify a BoQ speaker's role: a QUIC client, a QUIC server, or "any" ("Don’t care"). The default value SHOULD be "any"; other values MUST be explicitly configured.</t>
         <t>
-          A new ”BGP over QUIC” capability is defined below to signal whether the BoQ speaker is a QUIC client, a QUIC server, or any (Don’t care).</t>
+          A new ”BGP over QUIC” capability is defined below to signal whether the BoQ speaker is a QUIC client, a QUIC server, or "any" ("Don’t care").</t>
 
         <artwork>
       BoQ capability:
@@ -277,8 +277,17 @@
 
       <section title="Capability Category">
         <t>
-          For existing BGP capabilities, some of of them apply to the entire connection and MUST be sent in the control channel OPEN message, such as the BGP Role defined in <xref target="RFC9234"/>. If such capabilities are sent in an OPEN message in a function channel, they MUST be ignored.</t>
-        <t>The following table shows the category of each capability.</t>
+          For existing BGP capabilities, some of of them apply to the entire connection (indicated by "C" in <xref target="CapabilityCategory"/>) and are sent in the control channel OPEN message, such as the BGP Role defined in <xref target="RFC9234"/>. If a capability that applies only to the entire connection is sent in an OPEN message in a function channel, it MUST be ignored.
+        </t>
+        <t>
+          Some capabilities apply to a functional channel (indicated by "F" in <xref target="CapabilityCategory"/>) and can be sent in the functional channel OPEN message, such as the Multiprotocol Extensions capability <xref target="RFC2858"/>. If a capability that applies only to a function channel is sent in an OPEN message in the control channel, it MUST be ignored.
+        </t>
+        <t>
+          Some capabilities can apply to either the control channel or a functional channel, and can be sent in any OPEN message, such as the Graceful Restart capability <xref target="RFC4724"/>.  The use of these capabilities is detailed later in this document.
+        </t>
+        <t>
+          The following table shows the category of each capability.
+        </t>
         <table anchor="CapabilityCategory">
           <name>Capability Category Table</name>
           <thead>
