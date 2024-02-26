@@ -2523,7 +2523,7 @@
               In BoQ, function channels are unidirectional, hence after the control channel reaches established state, as the receiving side a BoQ speaker doesn't know what function channels will be created by its peer. A BoQ implementation is suggested to have a central process or thread to handle BGP packets received from its peer in function channels that don't have receiving FSMs yet, we can call this the packet dispatcher.
             </t>
             <t>
-              This dispatcher SHOULD only handle OPEN messages received from its BoQ peer, any other BGP messages SHOULD be ignored. When an OPEN message is received by the dispatcher, and there is no receiving FSM created for the function channel, a function Chanel receiving FSM SHOULD be created to handle packets from the stream. For example, when an OPEN packet for IPv6 unicast is received on stream #2, and no receiving FSM for IPv6 unicast exists, a receiving FSM SHOULD be created for IPv6 unicast, and the StreamID should be set to 2. When a receiving FSM for IPv6 unicast with different StreamID already exists, a NOTIFICATION with BoQ error code, BoQ channel conflict subcode SHOULD be sent in the control channel (see <xref target="channel collision"/>).
+              This dispatcher SHOULD only handle OPEN messages received from its BoQ peer, any other BGP messages SHOULD be ignored. When an OPEN message is received by the dispatcher, and there is no receiving FSM created for the function channel, a function Chanel receiving FSM SHOULD be created to handle packets from the stream. For example, when an OPEN packet for IPv6 unicast is received on stream #2, and no receiving FSM for IPv6 unicast exists, a receiving FSM SHOULD be created for IPv6 unicast, and the StreamID should be set to 2. Ifa receiving FSM for IPv6 unicast with different StreamID already exists, a NOTIFICATION with BoQ error code, BoQ channel conflict subcode SHOULD be sent in the control channel (see <xref target="channel collision"/>).
             </t>
             <t>
               There is no "Active State" or "OpenSent State" in a function channel receiving FSM.
@@ -2539,6 +2539,7 @@
                   In this state, the local system:
                   <list style="symbols">
                     <t>initialize related BGP resources for the peer connection for the AFI/SAFI,</t>
+                    <t>records the StreamID, and</t>
                     <t>changes its state to Connect.</t>
                   </list></t>
                 <t>
@@ -2573,9 +2574,9 @@
                     <t>delete the function channel receiving FSM.</t>
                   </list></t>
                 <t>
-                  If a NOTIFICATION message is received with a version error (Event 24), the local system:
+                  If a NOTIFICATION message is received with a version error (Event 24), or a QUICStreamCLose event (Event 30) is received, the local system:
                   <list style="symbols">
-                    <t>releases all related BGP resources,</t>
+                    <t>releases all related BGP resources for the channel,</t>
                     <t>delete the function channel receiving FSM.</t>
                   </list></t>
                 <t>
@@ -2616,7 +2617,7 @@
                     <t>remains in the OpenConfirmed state.</t>
                   </list></t>
                 <t>
-                  If the local system receives a NOTIFICATION message with a version error (NotifMsgVerErr (Event 24)), the local system:
+                  If the local system receives a NOTIFICATION message with a version error (NotifMsgVerErr (Event 24)), or a QUICStreamCLose event (Event 30) is received, the local system:
                   <list style="symbols">
                     <t>restarts the KeepaliveTimer, and</t>
                     <t>remains in the OpenConfirmed state.</t>
@@ -2680,7 +2681,7 @@
                   Each time the local system sends a KEEPALIVE in the control channel, it restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.
                 </t>
                 <t>
-                  If the local system receives a NOTIFICATION message (Event 24 or Event 25), the local system:
+                  If the local system receives a NOTIFICATION message (Event 24 or Event 25), or a QUICStreamCLose event (Event 30) is received, the local system:
                   <list style="symbols">
                     <t>deletes all routes associated with this connection,</t>
                     <t>releases all related BGP resources,</t>
