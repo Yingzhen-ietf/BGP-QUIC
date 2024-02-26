@@ -1179,6 +1179,30 @@
           </dl>
         </section>
 
+        <section title="QUIC Stream-Based Events">
+          <dl newline="true">
+            <dt>Event 29: QUICStreamOpen</dt>
+            <dd>
+              <dl>
+              <dt>Definition:</dt>
+              <dd>Event indicating that the local system's request to open a QUIC stream to the remote peer has been completed.</dd>
+              <dt>Status:</dt>
+              <dd>Mandatory</dd>
+              </dl>
+            </dd>
+
+            <dt>Event 30: QUICStreamClose</dt>
+            <dd>
+              <dl>
+              <dt>Definition:</dt>
+              <dd>Event indicating that the local system has received a QUIC stream close notice. The event needs to include a StreamID to identify the stream closed.</dd>
+              <dt>Status:</dt>
+              <dd>Mandatory</dd>
+              </dl>
+            </dd>  
+          </dl>
+        </section>      
+
         <section title="BGP Message-Based Events">
           <dl newline="true">
 
@@ -1382,8 +1406,8 @@
           </section>
           <section title="FSM Event Numbers">
             <t>
-              Same as <xref target="RFC4271"/>, the Event numbers (1-28) utilized in this state machine description
-              aid in specifying the behavior of the BGP state machine.
+              Same as <xref target="RFC4271"/>, the Event numbers (1-30) utilized in this state machine description
+              aid in specifying the behavior of the BGP state machine. Note event 29 and 30 are defined in this document.
               Implementations MAY use these numbers to provide network management
               information.  The exact form of an FSM or the FSM events are specific
               to each implementation.</t>
@@ -1429,7 +1453,7 @@
                   Upon receiving these 3 events, the local system will use these events to prevent peer oscillations. The method of preventing persistent peer oscillation is outside the scope of this document.
                 </t>
                 <t>
-                  Any other event (Events 9-12, 15-28) received in the Idle state does not cause change in the state of the local system.
+                  Any other event (Events 9-12, 15-30) received in the Idle state does not cause change in the state of the local system.
                 </t>
               </dd>
 
@@ -1500,6 +1524,14 @@
                   </list></t>
                 <t>
                   If the DelayOpenTimer is not running, the local system:
+                  <list style="symbols">
+                    <t>stops the ConnectRetryTimer to zero,</t>
+                    <t>drops the QUIC connection,</t>
+                    <t>releases all BGP resources, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  If the QUIC stream fails (Event 30) with StreamID 0, the local system:
                   <list style="symbols">
                     <t>stops the ConnectRetryTimer to zero,</t>
                     <t>drops the QUIC connection,</t>
@@ -1711,7 +1743,7 @@
                       <t>changes its state to Idle.</t>
                     </list></t>
                   <t>
-                    In response to any other event (Events 8, 10-11, 13, 19, 23, 25-28), the local system:
+                    In response to any other event (Events 8, 10-11, 13, 19, 23, 25-28, 30), the local system:
                     <list style="symbols">
                       <t>sets the ConnectRetryTimer to zero,</t>
                       <t>releases all BGP resources,</t>
@@ -1778,6 +1810,14 @@
                     <t>restarts the ConnectRetryTimer,</t>
                     <t>continues to listen for a connection that may be initiated by the remote BGP peer, and</t>
                     <t>changes its state to Active.</t>
+                  </list></t>
+                <t>
+                  If a QUICStreamClose event (Event 30) with StreamID 0 is received, the local system:
+                    <list style="symbols">
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources,</t>
+                    <t>drops the QUIC connection, and</t>
+                    <t>changes its state to Idle.</t>
                   </list></t>
                 <t>
                   When an OPEN message is received, all fields are checked for
@@ -1928,7 +1968,8 @@
                   </list></t>
                 <t>
                   If the local system receives a NOTIFICATION message with a version
-                  error (NotifMsgVerErr (Event 24)), the local system:
+                  error (NotifMsgVerErr (Event 24)), or a QUICStream_Close event
+                  (Event 30) with StreamID 0, the local system:
                   <list style="symbols">
                     <t>sets the ConnectRetryTimer to zero,</t>
                     <t>releases all BGP resources,</t>
@@ -2102,6 +2143,15 @@
                   <t>changes its state to Idle.</t>
                 </list></t>
                 <t>
+                  If the local system receives a QUICStream_Close event (Event 30)
+                  with StreamID 0, the local system:
+                  <list style="symbols">
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources,</t>
+                    <t> drops the QUIC connection, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
                   When a KEEPALIVE message is received, whether it is destined to the control channel or a function channel, the local system:
                   <list style="symbols">
                     <t>restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and</t>
@@ -2126,11 +2176,23 @@
           </section>
           <section title="Function Channel Sending FSM">
             <t>
-              Function channels can only be created after the control channel has reached Established state. This means that a function channel SHOULD NOT send any QUIC connection related events (14-18).
+              Function channels can only be created after the control channel has reached Established state. QUIC connection related events (14-18) MUST be handled by the control channel. However, a function channel may receive QUIC stream based events (Event 29 and 30).
             </t>
             <t>
               Function channels are unidirectional. For one AFI/SAFI, there might be one or two FSMs, one function channel sending FSM and one function channel receiving FSM.
             </t>
+            <t>
+              The following events SHOULD NOT be received in a function channel: 
+              <list style="symbols">
+                <t>ManualStart_with_PassiveQUICEstablishment event (Event 4),</t>
+                <t>AutomaticStart_with_PassiveQUICEstablishment event (Event 5), or</t>
+                <t>AutomaticStart_with_DampPeerOscillations_and_PassiveQUICEstablishment (Event 7). </t>
+                <t>QUICConnection_Valid (Event 14)</t>
+                <t>QUIC_CR_Invalid (Event 15)</t>
+                <t>QUIC_CR_Acked (Event 16)</t>
+                <t>QUICConnectionConfirmed (Event 17)</t>
+                <t>QUICConnectionFails (Event 18)</t>
+              </list></t>
 
             <dl newline="true">
               <dt>Idle State:</dt>
@@ -2142,6 +2204,8 @@
                   In response to a ManualStart event (Event 1) or an AutomaticStart event (Event 3), the local system:
                   <list style="symbols">
                     <t>initializes the function channel BGP resources for the peer connection,</t>
+                    <t>sets ConnectRetryCounter to zero,</t>
+                    <t>starts the ConnectRetryTimer with the initial value, and</t>
                     <t>changes its state to Connect.</t>
                   </list></t>
                 <t>
@@ -2156,15 +2220,8 @@
                 <t>
                   Upon receiving these 2 events, the local system will use these events to prevent peer oscillations. The method of preventing persistent peer oscillation is outside the scope of this document.
                 </t>
-                <t>
-                  Any event related with PassiveQUICEstablishment SHOULD NOT be received in a function channel: 
-                  <list style="symbols">
-                    <t>ManualStart_with_PassiveTcpEstablishment event (Event 4),</t>
-                    <t>AutomaticStart_with_PassiveTcpEstablishment event (Event 5), or</t>
-                    <t> AutomaticStart_with_DampPeerOscillations_and_PassiveTcpEstablishment (Event 7). </t>
-                  </list></t>
                  <t>
-                  Any other event received in the Idle state does not cause change in the state of the local system.
+                  Any other event (Event 9-12, 19-30) received in the Idle state does not cause change in the state of the local system.
                 </t>
               </dd>
 
@@ -2175,22 +2232,41 @@
                   In response to a ManualStop event (Event 2), the local system:
                   <list style="symbols">
                     <t>releases all BGP resources for the channel,</t>
+                    <t>sets ConnectRetryCounter to zero,</t>
+                    <t>stops the ConnectRetryTimer and sets ConnectRetryTimer to zero, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  In response to the ConnectRetryTimer_Expires event (Event 9), the local system:
+                  <list style="symbols">
+                    <t>restarts the ConnectRetryTimer, and</t>
                     <t>changes its state to Idle.</t>
                   </list></t>
                 <t>
                   The local system:
                   <list style="symbols">
+                    <t>stops the ConnectRetryTimer (if running) and sets the ConnectRetryTimer to zero,</t>
                     <t>sends an OPEN message to its peer using a unidirectional QUIC stream,</t>
                     <t>sets the HoldTimer to a large value,</t>
-                    <t>changes its state to OpenSent,</t>
-                    <t>record the StreamID.</t>
+                    <t>record the StreamID, and</t>
+                    <t>changes its state to OpenSent.</t>
                   </list></t>
-                  <t>
-                    If the value of the autonomous system field is the same as the local Autonomous System number, set the connection status to an internal connection; otherwise it will be "external".
-                  </t>
-                  <t>
-                    If a NOTIFICATION message is received with a version error (Event 24) in the control channel destined to the function channel, the local system:
+                <t>
+                  If a QUICStreamClose event (Event 30) is received and the StreamID matches the function
+                  channel's StreamID, the local system:
+                  <list style="symbols">
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>sets ConnectRetryCounter to zero,</t>
+                    <t>stops the ConnectRetryTimer and sets ConnectRetryTimer to zero, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  If the value of the autonomous system field is the same as the local Autonomous System number, set the connection status to an internal connection; otherwise it will be "external".
+                </t>
+                <t>
+                  If a NOTIFICATION message is received with a version error (Event 24) in the control channel destined to the function channel, the local system:
                     <list style="symbols">
+                      <t>stops the ConnectRetryTimer (if running) and sets the ConnectRetryTimer to zero,</t>
                       <t>release all BGP resources for the function channel,</t>
                       <t>terminates the function channel/QUIC stream,</t>
                       <t>performs peer oscillation damping if the DampPeerOscillations attribute is set to True, and</t>
@@ -2202,21 +2278,63 @@
               <dt>OpenSent State:</dt>
               <dd>
                 <t>
-                  A BoQ speaker waits for an OPEN message from its peer in the control channel with destination StreamID matches its own StreamID. When an OPEN_ACK message is received, it's checked for correctness. In case of error, the local BoQ speaker:
+                  A BoQ speaker waits for an OPEN message from its peer in the control channel with destination StreamID matches its own StreamID. </t>
+                <t>
+                  The start events (Events 1, 3, 5 and 7) are ignored in the OpenSent state.
+                </t>
+                <t>
+                  If a ManualStop event (Event 2) is issued in the OpenSent state,
+                  the local system:
+                  <list style="symbols">
+                    <t>sends the NOTIFICATION with a Cease,</t>
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for this channel,</t>
+                    <t>closes the stream,</t>
+                    <t>sets the ConnectRetryCounter to zero, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  If an AutomaticStop event (Event 8) is issued in the OpenSent state,
+                  the local system:
+                  <list style="symbols">
+                    <t>sends the NOTIFICATION with a Cease,</t>
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for this channel,</t>
+                    <t>closes the stream,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>(optionally) performs peer oscillation damping if the
+                        DampPeerOscillations attribute is set to TRUE, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t> 
+                <t>
+                  If the HoldTimer_Expires event (Event 10) or QUICStreamClose event (Event 30) is received in the OpenSent state,
+                  the local system:
+                  <list style="symbols">
+                    <t>sends the NOTIFICATION with a Cease,</t>
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for this channel,</t>
+                    <t>closes the stream,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>(optionally) performs peer oscillation damping if the
+                        DampPeerOscillations attribute is set to TRUE, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>                 
+                <t>
+                  When an OPEN message from its peer is received, it's checked for correctness. In case of error, the local BoQ speaker:
                   <list style="symbols">
                     <t>sends a NOTFICATION message,</t>
                     <t>closes the channel/QUIC stream,</t>
-                    <t>releases the corresponding BGP resources,</t>
+                    <t>releases the corresponding BGP resources for the channel,</t>
                     <t>(optionally) performs peer oscillation damping if the DampPeerOscillations attribute is TRUE, and</t>
                     <t>and changes its state to Idle. </t>
                   </list></t>
                 <t>
-                  If there is no error in the received OPEN message, the BoQ speaker sends a KEEPALIVE message and sets a KeepAlive timer, sets the HoldTimer and moves it's state to OpenConfirm. If the HoldTimer_Expires (Event 10), the local system:
+                  When an OPEN message is received and there is no error in the received OPEN message, the local system:
                   <list style="symbols">
-                    <t>sends a NOTIFICATION message with the error code Hold Timer Expired,</t>
-                    <t>releases all BGP resources for the channel,</t>
-                    <t>(optionally) performs peer oscillation damping if the DampPeerOscillations attribute is set to TRUE, and</t>
-                    <t>changes its state to Idle.</t>
+                    <t>sends a KEEPALIVE message,</t>
+                    <t>sets a KeepAlive timer,</t>
+                    <t>sets the HoldTimer, and</t>
+                    <t>changes its state to OpenConfirm.</t>
                   </list></t>
                 <t>
                   If a NOTIFICATION message is received in the control channel with version error (Event 24) and matching StreamID, the local system:
@@ -2239,8 +2357,19 @@
               <dt>OpenConfirm State:</dt>
               <dd>
                 <t>
-                  Waiting for a KEEPALIVE. When it is received in the control channel with matching StreamID, the BoQ speaker's state moved Established. If the HoldTimer expires, the BoQ speaker sends a NOTIFICATION with error code Hold Timer Expired and terminates the channel. If a NOTIFICATION sent to the control channel with the matching destination StreamID is received, it closes the channel.
-                </t>
+                  In this state, BoQ waits for a KEEPALIVE or NOTIFICATION message.</t>
+                <t>
+                  Any start event (Events 1, 3-7) is ignored in the OpenConfirm state.</t>
+                <t>
+                  In response to a ManualStop event (Event 2) initiated by the operator, the local system:
+                  <list style="symbols">
+                    <t>sends the NOTIFICATION message with a Cease,</t>
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>closes the stream,</t>
+                    <t>sets the ConnectRetryCounter to zero,</t>
+                    <t>sets the ConnectRetryTimer to zero, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
                 <t>
                   In response to the AutomaticStop event initiated by the system (Event 8), the local system:
                   <list style="symbols">
@@ -2267,11 +2396,60 @@
                     <t>remains in the OpenConfirmed state.</t>
                   </list></t>
                 <t>
-                  If the local system receives a KEEPALIVE message (KeepAliveMsg (Event 26)) from the control channel, the local system:
+                  If the local system receives a QUICStreamClose event (Event 30) or a NOTIFICATION message (Event 25), the
+                  local system:
+                  <list style="symbols">
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>closes the channel connection,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>(optionally) performs peer oscillation damping if the
+                       DampPeerOscillations attribute is set to TRUE, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  If the local system receives a NOTIFICATION message with a version
+                  error (NotifMsgVerErr (Event 24)), the local system:
+                  <list style="symbols">
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>drops the stream connection, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  If an OPEN message is received in the control channel for this function channel, all fields are checked for
+                  correctness.  If the BGP message header checking (BGPHeaderErr
+                  (Event 21)) or OPEN message checking detects an error (BGPOpenMsgErr (Event 22)), the local system:
+                  <list style="symbols">
+                    <t>sends a NOTIFICATION message with the appropriate error code,</t>
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>drops the stream connection,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>(optionally) performs peer oscillation damping if the
+                       DampPeerOscillations attribute is set to TRUE, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  If the local system receives a KEEPALIVE message (KeepAliveMsg (Event 26)) from the
+                  control channel with matching stream ID, the local system:
                   <list style="symbols">
                     <t>restarts the HoldTimer and</t>
                     <t>changes its state to Established.</t>
                   </list></t>
+                <t>
+                  In response to any other event (Events 9, 12-13, 20, 27-28), the local system:
+                  <list style="symbols">
+                    <t>sends a NOTIFICATION with a code of Finite State Machine Error,</t>
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>drops the stream connection,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>(optionally) performs peer oscillation damping if the
+                       DampPeerOscillations attribute is set to TRUE, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+
               </dd>
 
               <dt>Established State:</dt>
@@ -2287,7 +2465,7 @@
                   <list style="symbols">
                     <t>sends the NOTIFICATION message with a Cease,</t>
                     <t>deletes all routes associated with this connection,</t>
-                    <t>releases related BGP resources,</t>
+                    <t>releases related BGP resources for the channel,</t>
                     <t>drops the stream/channel connection,</t>
                     <t>changes its state to Idle.</t>
                   </list></t>
@@ -2317,16 +2495,13 @@
                     <t>restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.</t>
                   </list></t>
                 <t>
-                  Each time the local system sends a KEEPALIVE or UPDATE message, it restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.
-                </t>
-                <t>
                   Any QUIC event (Event 14-17) received SHOULD be ignored.
                 </t>
                 <t>
-                  If the local system receives a NOTIFICATION message (Event 24 or 25) from the control channel with matching StreamID, the local system:
+                  If the local system receives a NOTIFICATION message (Event 24 or 25) from the control channel with matching StreamID or a QUICStreamClose event (Event 30), the local system:
                   <list style="symbols">
                     <t>deletes all routes associated with this AFI/SAFI,</t>
-                    <t>releases the related BGP resources,</t>
+                    <t>releases the related BGP resources for this channel,</t>
                     <t>drops the stream/channel connection,</t>
                     <t>changes its state to Idle.</t>
                   </list></t>
