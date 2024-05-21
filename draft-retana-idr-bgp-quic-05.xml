@@ -1395,7 +1395,7 @@
               The two optional timers show this format:
               <list style="empty">
                 <t>DelayOpenTimer: DelayOpen, DelayOpenTime, DelayOpenTimer</t>
-                <t>IdleHoldTimer:  DampPeerOscillations, IdleHoldTime, IdleHoldTime</t>
+                <t>IdleHoldTimer:  DampPeerOscillations, IdleHoldTime, IdleHoldTimer</t>
               </list>
             </t>
             <t>
@@ -1427,14 +1427,14 @@
                   <t>sets ConnectRetryCounter to zero,</t>
                   <t>starts the ConnectRetryTimer with the initial value,</t>
                   <t>initiates a QUIC connection to the other BGP peer if the local system is configured as BoQ client or any,</t>
-                  <t>listens for a connection that may be initiated by the remote BGP peer if the local system is not configured as BoQ client, and</t>
+                  <t>listens for a connection that may be initiated by the remote BGP peer, and</t>
                   <t>changes its state to Connect.</t>
                   </list></t>
                 <t>The ManualStop event (Event 2) and AutomaticStop (Event 8) event are ignored in the Idle state.</t>
 
                 <t>In response to a ManualStart_with_PassiveQUICEstablishment event (Event 4) or AutomaticStart_with_PassiveQUICEstablishment event (Event 5), the local system:
                   <list style="symbols">
-                  <t>initializes all BGP resources,</t>
+                  <t>initializes all BGP resources for the peer connection,</t>
                   <t>sets the ConnectRetryCounter to zero,</t>
                   <t>starts the ConnectRetryTimer with the initial value,</t>
                   <t>listens for a connection that may be initiated by the remote peer, and</t>
@@ -1496,7 +1496,7 @@
                   If the control channel FSM receives a QUIC_CR_Invalid event (Event 15), the      local system rejects the QUIC connection, and the connection remains in the Connect state.
                 </t>
                 <t>
-                  If the QUIC connection succeeds (Event 16 or Event 17), the local system checks the DelayOpen attribute prior to processing.  If the DelayOpen attribute is set to TRUE, the local system:
+                  If the QUIC connection succeeds (Event 16, Event 17 or Event 29), the local system checks the DelayOpen attribute prior to processing.  If the DelayOpen attribute is set to TRUE, the local system:
                   <list style="symbols">
                     <t>stops the ConnectRetryTimer (if running) and sets the ConnectRetryTimer to zero,</t>
                     <t>sets the DelayOpenTimer to the initial value, and</t>
@@ -1650,8 +1650,8 @@
                   the local system rejects the QUIC connection and stays in the
                   Active State.</t>
                 <t>
-                  In response to the success of a QUIC connection (Event 16 or Event
-                  17), the local system checks the DelayOpen optional attribute
+                  In response to the success of a QUIC connection (Event 16, Event
+                  17 or Event 29), the local system checks the DelayOpen optional attribute
                   prior to processing.
                   <list style="empty">
                     <t>If the DelayOpen attribute is set to TRUE, the local system:
@@ -1804,6 +1804,16 @@
                   A QUIC Connection Request for an Invalid port (QUIC_CR_Invalid
                   (Event 15)) is ignored.</t>
                 <t>
+                  If a QUICStreamOpen (Event 29) is received, and the stream ID
+                  is 0, the local system stays in OpenSent state. If the steam ID
+                  is not 0, the local system:
+                  <list style="symbols">
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources,</t>
+                    <t>drops the QUIC connection, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
                   If a QUICConnectionFails event (Event 18) is received, the local system:
                   <list style="symbols">
                     <t>closes the BGP connection,</t>
@@ -1820,7 +1830,7 @@
                     <t>changes its state to Idle.</t>
                   </list></t>
                 <t>
-                  When an OPEN message is received, all fields are checked for
+                  When an OPEN message is received (Event 19), all fields are checked for
                   correctness.  If there are no errors in the OPEN message (Event
                   19), the local system:
                   <list style="symbols">
@@ -1946,8 +1956,8 @@
                     <t>remains in the OpenConfirmed state.</t>
                   </list></t>
                 <t>
-                  In the event of a QUIConnection_Valid event (Event 14), or the
-                  success of a QUIC connection (Event 16 or Event 17) while in
+                  In the event of a QUIConnection_Valid event (Event 14), the
+                  success of a QUIC connection (Event 16 or Event 17), or QUICStreamOpen (Event 29) while in
                   OpenConfirm, the local system needs to track the second
                   connection.</t>
                 <t>
@@ -2031,7 +2041,7 @@
                     <t>changes its state to Established.</t>
                   </list></t>
                 <t>
-                  In response to any other event (Events 9, 12-13, 20, 27-28), the local system:
+                  In response to any other event (Events 9, 12-13, 20, 27-28, 30), the local system:
                   <list style="symbols">
                     <t>sends a NOTIFICATION with a code of Finite State Machine Error,</t>
                     <t>sets the ConnectRetryTimer to zero,</t>
@@ -2050,13 +2060,12 @@
                   In this state, the control channel FSM can exchange NOTIFICATION, KEEPALIVE and ROUTEREFRESH messages with its peer. There is no UPDATE message in the control channel.
                 </t>
                 <t>
-                  Any Start event (Events 1, 3-7) is ignored in the Established state.</t>
+                  Any Start event (Events 1, 3-7, 27-29) is ignored in the Established state.</t>
                 <t>
                   In response to a ManualStop event (initiated by an operator) (Event 2), the local system:
                   <list style="symbols">
                     <t>sends the NOTIFICATION message with a Cease,</t>
                     <t>sets the ConnectRetryTimer to zero,</t>
-                    <t>deletes all routes associated with this connection,</t>
                     <t>releases BGP resources,</t>
                     <t>drops the QUIC connection,</t>
                     <t>sets the ConnectRetryCounter to zero, and</t>
@@ -2067,7 +2076,6 @@
                   <list style="symbols">
                     <t>sends a NOTIFICATION with a Cease,</t>
                     <t>sets the ConnectRetryTimer to zero,</t>
-                    <t>deletes all routes associated with this connection,</t>
                     <t>releases all BGP resources,</t>
                     <t>drops the QUIC connection,</t>
                     <t>increments the ConnectRetryCounter by 1,</t>
@@ -2122,7 +2130,6 @@
                   <list style="symbols">
                     <t>sends a NOTIFICATION with a Cease,</t>
                     <t>sets the ConnectRetryTimer to zero,</t>
-                    <t>deletes all routes associated with this connection,</t>
                     <t>releases all BGP resources,</t>
                     <t>drops the QUIC connection,</t>
                     <t>increments the ConnectRetryCounter by 1,</t>
@@ -2136,7 +2143,6 @@
                 QUIC, the local system:
                 <list style="symbols">
                   <t>sets the ConnectRetryTimer to zero,</t>
-                  <t>deletes all routes associated with this connection,</t>
                   <t>releases all the BGP resources,</t>
                   <t>drops the QUIC connection,</t>
                   <t>increments the ConnectRetryCounter by 1,</t>
@@ -2152,7 +2158,7 @@
                     <t>changes its state to Idle.</t>
                   </list></t>
                 <t>
-                  When a KEEPALIVE message is received, whether it is destined to the control channel or a function channel, the local system:
+                  When a KEEPALIVE message (Event 26) is received, whether it is destined to the control channel or a function channel, the local system:
                   <list style="symbols">
                     <t>restarts its HoldTimer, if the negotiated HoldTime value is non-zero, and</t>
                     <t>remains in the Established state.</t>
@@ -2162,7 +2168,6 @@
                   In response to any other event (Events 9, 12-13, 20-22), the local system:
                   <list style="symbols">
                     <t>sends a NOTIFICATION message with the Error Code Finite State Machine Error,</t>
-                    <t>deletes all routes associated with this connection,</t>
                     <t>sets the ConnectRetryTimer to zero,</t>
                     <t>releases all BGP resources,</t>
                     <t>drops the QUIC connection,</t>
@@ -2184,15 +2189,18 @@
             <t>
               The following events SHOULD NOT be received in a function channel: 
               <list style="symbols">
-                <t>ManualStart_with_PassiveQUICEstablishment event (Event 4),</t>
-                <t>AutomaticStart_with_PassiveQUICEstablishment event (Event 5), or</t>
-                <t>AutomaticStart_with_DampPeerOscillations_and_PassiveQUICEstablishment (Event 7). </t>
+                <t>ManualStart_with_PassiveQUICEstablishment event (Event 4)</t>
+                <t>AutomaticStart_with_PassiveQUICEstablishment event (Event 5)</t>
+                <t>AutomaticStart_with_DampPeerOscillations_and_PassiveQUICEstablishment (Event 7)</t>
+                <t>DelyOpenTimer_Expires (Event 12)</t>
                 <t>QUICConnection_Valid (Event 14)</t>
                 <t>QUIC_CR_Invalid (Event 15)</t>
                 <t>QUIC_CR_Acked (Event 16)</t>
                 <t>QUICConnectionConfirmed (Event 17)</t>
                 <t>QUICConnectionFails (Event 18)</t>
+                <t>BGPOpen with DelyOpenTimer running (Event 20)</t>
               </list></t>
+              <t>If any of the above events is recived, it SHOULD be ignored.</t>
 
             <dl newline="true">
               <dt>Idle State:</dt>
@@ -2240,7 +2248,8 @@
                   In response to the ConnectRetryTimer_Expires event (Event 9), the local system:
                   <list style="symbols">
                     <t>restarts the ConnectRetryTimer, and</t>
-                    <t>changes its state to Idle.</t>
+                    <t>initiates a stream to the other BGP peer,</t>
+                    <t>cstays in the Connect state.</t>
                   </list></t>
                 <t>
                   The local system:
@@ -2272,6 +2281,19 @@
                       <t>performs peer oscillation damping if the DampPeerOscillations attribute is set to True, and</t>
                       <t>changes its state to Idle.</t>
                     </list></t>
+                <t>
+                  In response to any other events (Events 8, 10-11, 13), the local system:
+                  <list style="symbols">
+                    <t>if the ConnectRetryTimer is running, stops and resets the ConnectRetryTimer (sets to zero),</t>
+                    <t>if the DelayOpenTimer is running, stops and resets the DelayOpenTimer (sets to zero),</t>
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>performs peer oscillation damping if the DampPeerOscillations attribute is set to True, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  Any other event (Event 12, 19-28) received in the Connect state does not cause change in the state of the local system.
+                </t>
               </dd>
 
 
@@ -2280,7 +2302,7 @@
                 <t>
                   A BoQ speaker waits for an OPEN message from its peer in the control channel with destination StreamID matches its own StreamID. </t>
                 <t>
-                  The start events (Events 1, 3, 5 and 7) are ignored in the OpenSent state.
+                  The start events (Events 1, 3-7, 12, 14-18, 20, 29) are ignored in the OpenSent state.
                 </t>
                 <t>
                   If a ManualStop event (Event 2) is issued in the OpenSent state,
@@ -2329,7 +2351,7 @@
                     <t>and changes its state to Idle. </t>
                   </list></t>
                 <t>
-                  When an OPEN message is received and there is no error in the received OPEN message, the local system:
+                  When an OPEN message (Event 19) is received and there is no error in the received OPEN message, the local system:
                   <list style="symbols">
                     <t>sends a KEEPALIVE message,</t>
                     <t>sets a KeepAlive timer,</t>
@@ -2337,14 +2359,28 @@
                     <t>changes its state to OpenConfirm.</t>
                   </list></t>
                 <t>
+                  If the negotiated hold time value is zero, then the HoldTimer and KeepaliveTimer are not started.
+                </t>
+                <t>
+                  If the BGP message header checking (Event 21) or OPEN message checking detects an error (Event 22), or an OpenCollisionDump (Event 23) is received, the local system:
+                  <list style="symbols">
+                    <t>sends a NOTFICATION message with the appropriate error code,</t>
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>closes the channel/QUIC stream,</t>
+                    <t>releases the corresponding BGP resources for the channel,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>(optionally) performs peer oscillation damping if the DampPeerOscillations attribute is TRUE, and</t>
+                    <t>changes its state to Idle. </t>
+                  </list></t>
+                <t>
                   If a NOTIFICATION message is received in the control channel with version error (Event 24) and matching StreamID, the local system:
                   <list style="symbols">
-                    <t>resale the related BGP resources,</t>
-                    <t>drop the stream, and</t>
+                    <t>releases the related BGP resources,</t>
+                    <t>closes the stream, and</t>
                     <t>changes its state to Idle.</t>
                   </list></t>
                 <t>
-                  In response to any other event (Events 11, 13, 25-28), the local system:
+                  In response to any other event (Events 9, 11, 13, 25-28), the local system:
                   <list style="symbols">
                     <t>sends the NOTIFICATION with the Error Code Finite State Machine Error,</t>
                     <t>releases related BGP resources,</t>
@@ -2359,7 +2395,7 @@
                 <t>
                   In this state, BoQ waits for a KEEPALIVE or NOTIFICATION message.</t>
                 <t>
-                  Any start event (Events 1, 3-7) is ignored in the OpenConfirm state.</t>
+                  Any start event (Events 1, 3-7, 12, 14-20, 29) is ignored in the OpenConfirm state.</t>
                 <t>
                   In response to a ManualStop event (Event 2) initiated by the operator, the local system:
                   <list style="symbols">
@@ -2419,7 +2455,7 @@
                 <t>
                   If an OPEN message is received in the control channel for this function channel, all fields are checked for
                   correctness.  If the BGP message header checking (BGPHeaderErr
-                  (Event 21)) or OPEN message checking detects an error (BGPOpenMsgErr (Event 22)), the local system:
+                  (Event 21)), OPEN message checking detects an error (BGPOpenMsgErr (Event 22)), or a OpenCollisionDump event (Event 23) is received, the local system:
                   <list style="symbols">
                     <t>sends a NOTIFICATION message with the appropriate error code,</t>
                     <t>sets the ConnectRetryTimer to zero,</t>
@@ -2438,7 +2474,7 @@
                     <t>changes its state to Established.</t>
                   </list></t>
                 <t>
-                  In response to any other event (Events 9, 12-13, 20, 27-28), the local system:
+                  In response to any other event (Events 9, 13, 27-28), the local system:
                   <list style="symbols">
                     <t>sends a NOTIFICATION with a code of Finite State Machine Error,</t>
                     <t>sets the ConnectRetryTimer to zero,</t>
@@ -2458,7 +2494,7 @@
                   When the sending function channel reaches established state, it sends UPDATE, NOTIFCATION and KEEPALIVE messages to its peer.
                 </t>
                 <t>
-                  Any Start event (Events 1, 3, 6) is ignored in the Established state.
+                  Any Start event (Events 1, 3-7, 19-20, 29) is ignored in the Established state.
                 </t>
                 <t>
                   In response to a ManualStop event (initiated by an operator)(Event 2), the local system:
@@ -2495,7 +2531,7 @@
                     <t>restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.</t>
                   </list></t>
                 <t>
-                  Any QUIC event (Event 14-17) received SHOULD be ignored.
+                  Any QUIC event (Event 14-18) received SHOULD be ignored.
                 </t>
                 <t>
                   If the local system receives a NOTIFICATION message (Event 24 or 25) from the control channel with matching StreamID or a QUICStreamClose event (Event 30), the local system:
@@ -2514,6 +2550,18 @@
                 <t>
                   A function channel is unidirectional, it SHOULD NOT receive any UPDATE message from the control channel with matching StreamID. In case an UPDATE message is received, it SHOULD be ignored.
                 </t>
+                <t>
+                  In response to any other event (Events 9, 13, 21-23, 27-28), the local system:
+                  <list style="symbols">
+                    <t>sends a NOTIFICATION with a code of Finite State Machine Error,</t>
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all BGP resources for the channel,</t>
+                    <t>drops the stream connection,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>(optionally) performs peer oscillation damping if the
+                       DampPeerOscillations attribute is set to TRUE, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
               </dd>              
             </dl>
           </section>
