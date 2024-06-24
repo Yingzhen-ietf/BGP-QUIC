@@ -25,10 +25,6 @@
 
       <address>
         <postal>
-          <street>2330 Central Expressway</street>
-          <city>Santa Clara</city>
-          <region>CA</region>
-          <code>95050</code>
           <country>USA</country>
         </postal>
        <email>aretana@futurewei.com</email>
@@ -39,10 +35,6 @@
       <organization>Futurewei Technologies</organization>
       <address>
         <postal>
-          <street>2330 Central Expressway</street>
-          <city>Santa Clara</city>
-          <region>CA</region>
-          <code>95050</code>
           <country>USA</country>
         </postal>
         <phone></phone>
@@ -418,6 +410,16 @@
            </tr>
          </tbody>
        </table>
+
+      </section>
+
+      <section title="Marker for End-of-RIB">
+        <t>
+          The End-of-RIB marker was defined in <xref target="RFC4724"/> for the purpose of BGP graceful restart, however it was recommended because the generation of such a marker was helpful for routing convergence in general.</t>
+        <t>
+          For an implementation of this specification, a BoQ speaker SHOULD always send the End-of-RIB marker to indicate to its peer the completion of the initial routing update after the function channel is established.</t>
+        <t>
+          The format of the End-of-RIB marker is the same as specified in <xref target="RFC4724"/>.</t>
 
       </section>
 
@@ -1349,10 +1351,11 @@
 
           </dl>
         </section>
+
       </section>
 
 
-        <section title="FSM Definition">
+      <section title="FSM Definition">
           <t>
             BoQ implementations are expected to maintain a separate FSM for each BoQ channel. As described later in this section, a BoQ implementation will have one FSM for the control channel, plus one FSM for each direction of a function channel. For example, two BoQ speakers configured to advertise IPv6 routes in both directions will have 3 active FSMs: one for the control channel, and one for each direction (send and receive) of the IPv6 route exchange. One BoQ FSM corresponds to one QUIC stream connection.
           </t>
@@ -1414,8 +1417,8 @@
           </section>
         </section>
 
-        <section title="BoQ Finite State Machine">
-          <section title="Control Channel FSM">
+      <section title="BoQ Finite State Machine">
+        <section title="Control Channel FSM">
             <dl newline="true">
               <dt>Idle State:</dt>
               <dd>
@@ -1615,7 +1618,7 @@
                 <t>
                   In response to a ManualStop event (Event 2), the local system:
                   <list style="symbols">
-                    <t>If the DelayOpenTimer is running and the SendNOTIFICATIONwithoutOPEN session attribute is set, the local system sends a NOTIFICATION with a Cease,</t>
+                    <t>(Optionally)If the SendNOTIFICATIONwithoutOPEN session attribute is set, the local system sends a NOTIFICATION with a Cease,</t>
                     <t>releases all BGP resources including stopping the DelayOpenTimer,</t>
                     <t>drops the QUIC connection,</t>
                     <t>sets ConnectRetryCounter to zero,</t>
@@ -1699,8 +1702,8 @@
                       <list style="symbols">
                         <t>resets the KeepaliveTimer (set to zero),</t>
                         <t>resets the HoldTimer to zero, and</t>
-                        <t>changes its state to OpenConfirm.</t>
                       </list></t>
+                    <t>changes its state to OpenConfirm.</t>
                   </list></t>
                 <t>
                   If the value of the autonomous system field is the same as the
@@ -1953,7 +1956,7 @@
                   <list style="symbols">
                     <t>sends a KEEPALIVE message,</t>
                     <t>restarts the KeepaliveTimer, and</t>
-                    <t>remains in the OpenConfirmed state.</t>
+                    <t>remains in the OpenConfirm state.</t>
                   </list></t>
                 <t>
                   In the event of a QUIConnection_Valid event (Event 14), the
@@ -2116,9 +2119,27 @@
                 <t>
                   An invalid QUIC connection (QUIC_CR_Invalid event (Event 15)) will be ignored.</t>
                 <t>
-                  In response to an indication that the QUIC connection is
-                  successfully established (Event 16 or Event 17), the second
-                  connection SHALL be tracked until it sends an OPEN message.</t>
+                  If the Graceful Restart Capability <xref target="RFC4724"/> with one or more AFIs/SAFIs
+                  has not been received for the session, then in response to an
+                  indication that a QUIC connection is successfully established
+                  (Event 16 or Event 17), the second connection SHALL be tracked
+                  until it sends an OPEN message.</t>
+                <t>
+                  However, if the Graceful Restart Capability with one or more
+                  AFIs/SAFIs has been received for the session, then in response
+                  to Event 16 or Event 17 the local system:
+                  <list style="symbols">
+                    <t>retains all routes associated with this connection according
+                       to section 4.2 of <xref target="RFC4724"/>. </t>
+                    <t>releases all other BGP resources,</t>
+                    <t>drops the QUIC connection associated with the ESTABLISHED session,</t>
+                    <t>initializes all BGP resources for the peer connection, other
+                       than those required in order to retain routes according to
+                       section 4.2 of <xref target="RFC4724"/>, </t>
+                    <t>sets ConnectRetryCounter to zero,</t>
+                    <t>starts the ConnectRetryTimer with the initial value, and</t>
+                    <t>changes its state to Connect.</t>
+                  </list></t>
                 <t>
                   If a valid OPEN message (BGPOpen (Event 19)) is received, and if
                   the CollisionDetectEstablishedState optional attribute is TRUE,
@@ -2137,17 +2158,32 @@
                        DampPeerOscillations is set to TRUE, and</t>
                     <t>changes its state to Idle.</t>
                   </list></t>
-               <t>
-                If the local system receives a NOTIFICATION message (Event 24 or
-                Event 25) or a QUICConnectionFails (Event 18) from the underlying
-                QUIC, the local system:
-                <list style="symbols">
-                  <t>sets the ConnectRetryTimer to zero,</t>
-                  <t>releases all the BGP resources,</t>
-                  <t>drops the QUIC connection,</t>
-                  <t>increments the ConnectRetryCounter by 1,</t>
-                  <t>changes its state to Idle.</t>
-                </list></t>
+                <t>
+                  If the local system receives a NOTIFICATION message (Event 24 or
+                  Event 25) or a QUICConnectionFails (Event 18) from the underlying
+                  QUIC, and the Graceful Restart capability with one or more AFIs/SAFIs
+                  has not been received for the session, the local system:
+                  <list style="symbols">
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>releases all the BGP resources,</t>
+                    <t>drops the QUIC connection,</t>
+                    <t>increments the ConnectRetryCounter by 1,</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
+                <t>
+                  However, if the local system receives a QUICConnectionFails (Event
+                  18) from the underlying QUIC, and the Graceful Restart Capability
+                  with one or more AFIs/SAFIs has been received for the session, the
+                  local system:
+                  <list style="symbols">
+                    <t>sets the ConnectRetryTimer to zero,</t>
+                    <t>retains all routes associated with this connection according
+                       to section 4.2 of <xref target="RFC4724"/>,</t>
+                    <t>releases all other BGP resources,</t>
+                    <t>drops the QUIC connection,</t>
+                    <t>increments the ConnectRetryCounter by 1, and</t>
+                    <t>changes its state to Idle.</t>
+                  </list></t>
                 <t>
                   If the local system receives a QUICStream_Close event (Event 30)
                   with StreamID 0, the local system:
@@ -2178,8 +2214,9 @@
                   </list></t>
               </dd>
             </dl>
-          </section>
-          <section title="Function Channel FSM">
+        </section>
+
+        <section title="Function Channel FSM">
             <t>
               Function channels can only be created after the control channel has reached Established state. QUIC connection related events (Event 14-18) MUST be handled exclusively by the control channel. However, a function channel may receive QUIC stream based events (Event 29 and 30).
             </t>
@@ -2786,7 +2823,8 @@
             </dl>
           </section>
           </section>
-        </section>
+
+      </section>
 
     </section>
 
@@ -3002,6 +3040,7 @@
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.2119.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4271.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4486.xml"/>
+    <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4724.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.5492.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.6286.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.7301.xml"/>
@@ -3009,7 +3048,7 @@
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.9000.xml"/>
     </references>
     <references title="Informative References">
-    <xi:include href="https://www.rfc-editor.org/refs/bibxml3/reference.I-D.ietf-idr-bgp-multisession.xml"/>
+    <xi:include href="http://xml.resource.org/public/rfc/bibxml-ids/reference.I-D.draft-ietf-idr-bgp-multisession-07.xml"/>
     <xi:include href="https://bib.ietf.org/public/rfc/bibxml3/reference.I-D.ietf-idr-rfc7752bis.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.2918.xml"/>
     <xi:include href="https://www.rfc-editor.org/refs/bibxml/reference.RFC.4272.xml"/>
